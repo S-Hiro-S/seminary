@@ -137,6 +137,18 @@ function renderLiveCard(classes) {
 // ==========================================
 // ホーム：お知らせ
 // ==========================================
+// 日付フォーマット（ISO文字列→日本語表記）
+function formatDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  // UTCをJST（+9h）に変換してから日付を取得
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${jst.getUTCFullYear()}年` +
+         `${String(jst.getUTCMonth() + 1).padStart(2, '0')}月` +
+         `${String(jst.getUTCDate()).padStart(2, '0')}日`;
+}
+
 function renderAnnouncements(data) {
   const el     = document.getElementById('announcements-list');
   const active = data.filter(a => toBool(a.active));
@@ -148,7 +160,7 @@ function renderAnnouncements(data) {
 
   el.innerHTML = active.map(a => `
     <div class="border-l-4 border-[#4a5d23] pl-4 py-1">
-      <p class="text-sm text-gray-400 mb-1">${a.date}</p>
+      <p class="text-sm text-gray-400 mb-1">${formatDate(a.date)}</p>
       <p class="font-bold text-[#2c3614]">${a.title}</p>
       <p class="text-gray-600 text-sm mt-1 leading-relaxed">${a.body}</p>
     </div>
