@@ -21,7 +21,7 @@ const PERIOD_RANGE = {
 // ==========================================
 function fetchSheet(sheet) {
   const key = `seminary_${sheet}`;
- 
+
   // キャッシュが有効なら即返す
   try {
     const cached = localStorage.getItem(key);
@@ -30,10 +30,10 @@ function fetchSheet(sheet) {
       if (Date.now() - ts < TTL) return Promise.resolve(data);
     }
   } catch (_) {}
- 
+
   return new Promise((resolve) => {
     const cbName = `_seminary_cb_${sheet}_${Date.now()}`;
- 
+
     // コールバック関数を一時登録
     window[cbName] = (data) => {
       delete window[cbName];
@@ -44,7 +44,7 @@ function fetchSheet(sheet) {
       } catch (_) {}
       resolve(Array.isArray(data) ? data : []);
     };
- 
+
     // scriptタグでJSONP呼び出し
     const script    = document.createElement('script');
     script.id       = cbName;
@@ -62,7 +62,6 @@ function fetchSheet(sheet) {
     document.head.appendChild(script);
   });
 }
- 
 
 // ==========================================
 // ユーティリティ
@@ -137,18 +136,6 @@ function renderLiveCard(classes) {
 // ==========================================
 // ホーム：お知らせ
 // ==========================================
-// 日付フォーマット（ISO文字列→日本語表記）
-function formatDate(str) {
-  if (!str) return '';
-  const d = new Date(str);
-  if (isNaN(d.getTime())) return str;
-  // UTCをJST（+9h）に変換してから日付を取得
-  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  return `${jst.getUTCFullYear()}年` +
-         `${String(jst.getUTCMonth() + 1).padStart(2, '0')}月` +
-         `${String(jst.getUTCDate()).padStart(2, '0')}日`;
-}
-
 function renderAnnouncements(data) {
   const el     = document.getElementById('announcements-list');
   const active = data.filter(a => toBool(a.active));
@@ -160,7 +147,7 @@ function renderAnnouncements(data) {
 
   el.innerHTML = active.map(a => `
     <div class="border-l-4 border-[#4a5d23] pl-4 py-1">
-      <p class="text-sm text-gray-400 mb-1">${formatDate(a.date)}</p>
+      <p class="text-sm text-gray-400 mb-1">${a.date}</p>
       <p class="font-bold text-[#2c3614]">${a.title}</p>
       <p class="text-gray-600 text-sm mt-1 leading-relaxed">${a.body}</p>
     </div>
@@ -192,6 +179,27 @@ function renderTimetable(classes) {
 
       if (!cls || !cls.subject) return `<td class="${tdCls}"></td>`;
 
+      const hasZoom  = cls.zoomUrl  && String(cls.zoomUrl).startsWith('http');
+      const hasDrive = cls.driveUrl && String(cls.driveUrl).startsWith('http');
+
+      const zoomLink = hasZoom && p.id !== 'chapel'
+        ? `<a href="${cls.zoomUrl}" target="_blank" rel="noopener"
+              class="inline-flex items-center gap-1 text-[#4a5d23] font-bold text-xs hover:underline">
+             <i class="fa-solid fa-video text-[10px]"></i> Zoom
+           </a>`
+        : '';
+
+      const driveLink = hasDrive
+        ? `<a href="${cls.driveUrl}" target="_blank" rel="noopener"
+              class="inline-flex items-center gap-1 text-[#8b5a2b] font-bold text-xs hover:underline">
+             <i class="fa-solid fa-folder-open text-[10px]"></i> 資料
+           </a>`
+        : '';
+
+      const links = (zoomLink || driveLink)
+        ? `<div class="flex flex-col gap-0.5 mt-2 border-t border-gray-100 pt-1">${zoomLink}${driveLink}</div>`
+        : '';
+
       return `
         <td class="${tdCls}">
           ${toBool(cls.isPublic) && p.id !== 'chapel'
@@ -200,6 +208,7 @@ function renderTimetable(classes) {
           <span class="block font-bold text-sm leading-snug">${cls.subject}</span>
           ${cls.note    ? `<span class="block text-xs text-gray-400 mt-0.5">${cls.note}</span>`    : ''}
           ${cls.teacher ? `<span class="block text-xs text-gray-500 mt-1">${cls.teacher}</span>` : ''}
+          ${links}
         </td>`;
     }).join('');
 
@@ -338,7 +347,6 @@ async function init() {
   renderLiveCard(classes);
   renderAnnouncements(announcements);
   renderTimetable(classes);
-  renderMaterials(classes);
   renderArchives(archives);
 
   // 1分ごとにライブ状態を更新
