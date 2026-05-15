@@ -177,38 +177,56 @@ function renderTimetable(classes) {
         isActive ? 'live-cell'  : '',
       ].join(' ');
 
-      if (!cls || !cls.subject) return `<td class="${tdCls}"></td>`;
+      // 空セル（授業なし）- リンク行の高さだけ確保して縦位置を揃える
+      if (!cls || !cls.subject) {
+        return `<td class="${tdCls}" style="height:1px">
+          <div class="flex flex-col h-full">
+            <div class="flex-1"></div>
+            <div class="border-t border-gray-100" style="min-height:2rem"></div>
+          </div>
+        </td>`;
+      }
 
       const hasZoom  = cls.zoomUrl  && String(cls.zoomUrl).startsWith('http');
       const hasDrive = cls.driveUrl && String(cls.driveUrl).startsWith('http');
 
       const zoomLink = hasZoom && p.id !== 'chapel'
         ? `<a href="${cls.zoomUrl}" target="_blank" rel="noopener"
-              class="inline-flex items-center gap-1 text-[#4a5d23] font-bold text-xs hover:underline">
+              class="inline-flex items-center justify-center gap-1
+                     text-[#4a5d23] font-bold text-xs hover:underline">
              <i class="fa-solid fa-video text-[10px]"></i> Zoom
            </a>`
         : '';
 
       const driveLink = hasDrive
         ? `<a href="${cls.driveUrl}" target="_blank" rel="noopener"
-              class="inline-flex items-center gap-1 text-[#8b5a2b] font-bold text-xs hover:underline">
+              class="inline-flex items-center justify-center gap-1
+                     text-[#8b5a2b] font-bold text-xs hover:underline">
              <i class="fa-solid fa-folder-open text-[10px]"></i> 資料
            </a>`
         : '';
 
-      const links = (zoomLink || driveLink)
-        ? `<div class="flex flex-col gap-0.5 mt-2 border-t border-gray-100 pt-1">${zoomLink}${driveLink}</div>`
-        : '';
-
       return `
-        <td class="${tdCls}">
-          ${toBool(cls.isPublic) && p.id !== 'chapel'
-            ? '<span class="block text-[10px] text-[#4a5d23] font-bold mb-1">📢 公開</span>'
-            : ''}
-          <span class="block font-bold text-sm leading-snug">${cls.subject}</span>
-          ${cls.note    ? `<span class="block text-xs text-gray-400 mt-0.5">${cls.note}</span>`    : ''}
-          ${cls.teacher ? `<span class="block text-xs text-gray-500 mt-1">${cls.teacher}</span>` : ''}
-          ${links}
+        <td class="${tdCls}" style="height:1px">
+          <div class="flex flex-col h-full">
+
+            <!-- 上段：科目・担当（中央寄せ・縦中央） -->
+            <div class="flex-1 flex flex-col items-center justify-center text-center px-1 py-2">
+              ${toBool(cls.isPublic) && p.id !== 'chapel'
+                ? '<span class="text-[10px] text-[#4a5d23] font-bold mb-1">📢 公開</span>'
+                : ''}
+              <span class="font-bold text-sm leading-snug">${cls.subject}</span>
+              ${cls.note    ? `<span class="text-xs text-gray-400 mt-0.5">${cls.note}</span>`    : ''}
+              ${cls.teacher ? `<span class="text-xs text-gray-500 mt-1">${cls.teacher}</span>` : ''}
+            </div>
+
+            <!-- 下段：リンク（常に底部に固定） -->
+            <div class="flex flex-col items-center gap-0.5 border-t border-gray-100 py-1 px-1"
+                 style="min-height:2rem">
+              ${zoomLink}${driveLink}
+            </div>
+
+          </div>
         </td>`;
     }).join('');
 
