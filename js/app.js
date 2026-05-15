@@ -254,7 +254,7 @@ function renderMaterials(classes) {
                   class="mt-3 inline-flex items-center gap-2 text-[#4a5d23] font-bold text-sm hover:underline">
                  <i class="fa-solid fa-folder-open"></i> 資料を開く
                </a>`
-            : `<p class="mt-3 text-xs text-gray-300">資料準備中</p>`
+            : `<p class="mt-3 text-xs text-gray-400">資料は登録されておりません</p>`
           }
         </div>`;
     }).join('') || '<p class="text-gray-300 text-sm">この曜日に授業はありません。</p>';
