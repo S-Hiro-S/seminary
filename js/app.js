@@ -17,26 +17,52 @@ const PERIOD_RANGE = {
 };
 
 // ==========================================
-// データ取得（localStorage キャッシュ付き）
+// データ取得（JSONP + localStorage キャッシュ）
 // ==========================================
-async function fetchSheet(sheet) {
+function fetchSheet(sheet) {
   const key = `seminary_${sheet}`;
+ 
+  // キャッシュが有効なら即返す
   try {
     const cached = localStorage.getItem(key);
     if (cached) {
       const { data, ts } = JSON.parse(cached);
-      if (Date.now() - ts < TTL) return data;
+      if (Date.now() - ts < TTL) return Promise.resolve(data);
     }
-    const res  = await fetch(`${API}?sheet=${sheet}`);
-    const data = await res.json();
-    localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-    return data;
-  } catch (err) {
-    console.warn(`[${sheet}] fetch失敗。キャッシュを使用します。`, err);
-    const cached = localStorage.getItem(key);
-    return cached ? JSON.parse(cached).data : [];
-  }
+  } catch (_) {}
+ 
+  return new Promise((resolve) => {
+    const cbName = `_seminary_cb_${sheet}_${Date.now()}`;
+ 
+    // コールバック関数を一時登録
+    window[cbName] = (data) => {
+      delete window[cbName];
+      const el = document.getElementById(cbName);
+      if (el) el.remove();
+      try {
+        localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+      } catch (_) {}
+      resolve(Array.isArray(data) ? data : []);
+    };
+ 
+    // scriptタグでJSONP呼び出し
+    const script    = document.createElement('script');
+    script.id       = cbName;
+    script.src      = `${API}?sheet=${sheet}&callback=${cbName}`;
+    script.onerror  = () => {
+      console.warn(`[${sheet}] JSONP失敗。キャッシュを使用します。`);
+      delete window[cbName];
+      try {
+        const cached = localStorage.getItem(key);
+        resolve(cached ? JSON.parse(cached).data : []);
+      } catch (_) {
+        resolve([]);
+      }
+    };
+    document.head.appendChild(script);
+  });
 }
+ 
 
 // ==========================================
 // ユーティリティ
