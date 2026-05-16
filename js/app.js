@@ -136,6 +136,16 @@ function renderLiveCard(classes) {
 // ==========================================
 // ホーム：お知らせ
 // ==========================================
+
+// ISO日付文字列 → 日本語表記（JST補正）
+function formatDate(str) {
+  if (!str) return '';
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return str;
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${jst.getUTCFullYear()}/${jst.getUTCMonth() + 1}/${jst.getUTCDate()}`;
+}
+
 function renderAnnouncements(data) {
   const el     = document.getElementById('announcements-list');
   const active = data.filter(a => toBool(a.active));
@@ -147,7 +157,7 @@ function renderAnnouncements(data) {
 
   el.innerHTML = active.map(a => `
     <div class="border-l-4 border-[#4a5d23] pl-4 py-1">
-      <p class="text-sm text-gray-400 mb-1">${a.date}</p>
+      <p class="text-sm text-gray-400 mb-1">${formatDate(a.date)}</p>
       <p class="font-bold text-[#2c3614]">${a.title}</p>
       <p class="text-gray-600 text-sm mt-1 leading-relaxed">${a.body}</p>
     </div>
@@ -217,8 +227,10 @@ function renderTimetable(classes) {
 
             <!-- 上段：科目・担当（上揃え・横センター） -->
             <div class="flex-1 flex flex-col items-center text-center px-2 pt-3 pb-1">
-              ${toBool(cls.isPublic) && p.id !== 'chapel'
-                ? '<span class="text-[10px] text-[#4a5d23] font-bold mb-1">📢 公開</span>'
+              ${p.id !== 'chapel'
+                ? (toBool(cls.isPublic)
+                    ? '<span class="text-[10px] text-[#4a5d23] font-bold mb-1" style="height:1.2rem;display:block">📢 公開授業</span>'
+                    : '<span style="height:1.2rem;display:block"></span>')
                 : ''}
               <span class="font-bold text-sm leading-snug">${cls.subject}</span>
               ${cls.note    ? `<span class="text-xs text-gray-400 mt-0.5">${cls.note}</span>`    : ''}
@@ -358,6 +370,14 @@ async function init() {
   document.getElementById('menu-toggle')?.addEventListener('click', () => {
     document.getElementById('mobile-menu')?.classList.toggle('hidden');
   });
+
+  // 読み込み中表示（データ取得前）
+  document.getElementById('now-time').textContent    = '';
+  document.getElementById('now-subject').textContent = '読み込み中...';
+  document.getElementById('now-teacher').textContent = '';
+  document.getElementById('off-hint').classList.add('hidden');
+  document.getElementById('live-badge').classList.add('hidden');
+  document.getElementById('live-actions').classList.add('hidden');
 
   // 全シートを並列取得
   const [classes, announcements, archives] = await Promise.all([
