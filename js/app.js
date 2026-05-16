@@ -177,12 +177,15 @@ function renderTimetable(classes) {
         isActive ? 'live-cell'  : '',
       ].join(' ');
 
-      // 空セル（授業なし）- リンク行の高さだけ確保して縦位置を揃える
+      // 空セル（授業なし）― リンクスロット2行分を確保して高さを揃える
       if (!cls || !cls.subject) {
         return `<td class="${tdCls}" style="height:1px">
           <div class="flex flex-col h-full">
             <div class="flex-1"></div>
-            <div class="border-t border-gray-100" style="min-height:2rem"></div>
+            <div class="border-t border-gray-100 flex flex-col items-center py-1">
+              <span style="height:1.3rem;display:block"></span>
+              <span style="height:1.3rem;display:block"></span>
+            </div>
           </div>
         </td>`;
       }
@@ -190,28 +193,30 @@ function renderTimetable(classes) {
       const hasZoom  = cls.zoomUrl  && String(cls.zoomUrl).startsWith('http');
       const hasDrive = cls.driveUrl && String(cls.driveUrl).startsWith('http');
 
-      const zoomLink = hasZoom && p.id !== 'chapel'
+      // Zoomスロット：リンクがなくても同じ高さのspanを置く
+      const zoomSlot = (hasZoom && p.id !== 'chapel')
         ? `<a href="${cls.zoomUrl}" target="_blank" rel="noopener"
-              class="inline-flex items-center justify-center gap-1
-                     text-[#4a5d23] font-bold text-xs hover:underline">
-             <i class="fa-solid fa-video text-[10px]"></i> Zoom
+              style="height:1.3rem;display:flex;align-items:center;justify-content:center;gap:4px"
+              class="text-[#4a5d23] font-bold text-xs hover:underline">
+             <i class="fa-solid fa-video" style="font-size:9px"></i> Zoom
            </a>`
-        : '';
+        : `<span style="height:1.3rem;display:block"></span>`;
 
-      const driveLink = hasDrive
+      // 資料スロット：リンクがなくても同じ高さのspanを置く
+      const driveSlot = hasDrive
         ? `<a href="${cls.driveUrl}" target="_blank" rel="noopener"
-              class="inline-flex items-center justify-center gap-1
-                     text-[#8b5a2b] font-bold text-xs hover:underline">
-             <i class="fa-solid fa-folder-open text-[10px]"></i> 資料
+              style="height:1.3rem;display:flex;align-items:center;justify-content:center;gap:4px"
+              class="text-[#8b5a2b] font-bold text-xs hover:underline">
+             <i class="fa-solid fa-folder-open" style="font-size:9px"></i> 資料
            </a>`
-        : '';
+        : `<span style="height:1.3rem;display:block"></span>`;
 
       return `
         <td class="${tdCls}" style="height:1px">
           <div class="flex flex-col h-full">
 
-            <!-- 上段：科目・担当（中央寄せ・縦中央） -->
-            <div class="flex-1 flex flex-col items-center justify-center text-center px-1 py-2">
+            <!-- 上段：科目・担当（上揃え・横センター） -->
+            <div class="flex-1 flex flex-col items-center text-center px-2 pt-3 pb-1">
               ${toBool(cls.isPublic) && p.id !== 'chapel'
                 ? '<span class="text-[10px] text-[#4a5d23] font-bold mb-1">📢 公開</span>'
                 : ''}
@@ -220,10 +225,10 @@ function renderTimetable(classes) {
               ${cls.teacher ? `<span class="text-xs text-gray-500 mt-1">${cls.teacher}</span>` : ''}
             </div>
 
-            <!-- 下段：リンク（常に底部に固定） -->
-            <div class="flex flex-col items-center gap-0.5 border-t border-gray-100 py-1 px-1"
-                 style="min-height:2rem">
-              ${zoomLink}${driveLink}
+            <!-- 下段：固定高さスロット（Zoom・資料 各1.3rem） -->
+            <div class="border-t border-gray-100 flex flex-col items-center py-1">
+              ${zoomSlot}
+              ${driveSlot}
             </div>
 
           </div>
