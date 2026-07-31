@@ -91,15 +91,17 @@ function toBool(val) {
 // 休暇期間（vacationsシート）
 // ==========================================
 
-// 日付をYYYY-MM-DDのみに正規化（時刻付きISO文字列にも対応）
+// 日付をYYYY-MM-DDのみに正規化（GAS/SheetsがUTCシリアライズしたISO日時にも対応）
 function toDateOnly(val) {
   if (!val) return null;
   const s = String(val);
-  const m = s.match(/^\d{4}-\d{2}-\d{2}/);
-  if (m) return m[0];
+  // "2026-07-26" のような日付のみの文字列はそのまま使う
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const d = new Date(s);
   if (isNaN(d.getTime())) return null;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  // シートの日付はUTCとしてシリアライズされて届くため、JST（+9時間）に補正してから日付を取り出す
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return `${jst.getUTCFullYear()}-${String(jst.getUTCMonth() + 1).padStart(2, '0')}-${String(jst.getUTCDate()).padStart(2, '0')}`;
 }
 
 // 本日が休暇期間内かどうかを判定し、該当する行（start/end/messageなど）を返す
