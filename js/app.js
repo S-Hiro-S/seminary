@@ -88,9 +88,36 @@ function toBool(val) {
 }
 
 // ==========================================
+// 休暇期間（vacationsシート）
+// ==========================================
+
+// 日付をYYYY-MM-DDのみに正規化（時刻付きISO文字列にも対応）
+function toDateOnly(val) {
+  if (!val) return null;
+  const s = String(val);
+  const m = s.match(/^\d{4}-\d{2}-\d{2}/);
+  if (m) return m[0];
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 本日が休暇期間内かどうかを判定し、該当する行（start/end/messageなど）を返す
+function getActiveVacation(vacations) {
+  if (!Array.isArray(vacations) || !vacations.length) return null;
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return vacations.find(v => {
+    const start = toDateOnly(v.start);
+    const end   = toDateOnly(v.end);
+    return start && end && todayStr >= start && todayStr <= end;
+  }) || null;
+}
+
+// ==========================================
 // ホーム：ライブカード
 // ==========================================
-function renderLiveCard(classes) {
+function renderLiveCard(classes, vacation) {
   const now = new Date();
   const day = todayLabel();
   const pid = currentPeriodId();
@@ -100,6 +127,20 @@ function renderLiveCard(classes) {
     `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日（${day}）` +
     ` ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+  // 休暇期間中は放送中バッジ・Zoomボタンを出さず、専用の案内のみ表示する
+  if (vacation) {
+    document.getElementById('now-subject').textContent = vacation.message || '現在は休暇期間中です';
+    document.getElementById('now-teacher').textContent = '';
+    document.getElementById('live-badge').classList.add('hidden');
+    document.getElementById('vacation-badge')?.classList.remove('hidden');
+    document.getElementById('live-actions').classList.add('hidden');
+    const hint = document.getElementById('off-hint');
+    hint.textContent = vacation.note || '休暇期間のため、授業はお休みです。';
+    hint.classList.remove('hidden');
+    return;
+  }
+  document.getElementById('vacation-badge')?.classList.add('hidden');
+
   const active = (pid && DAYS.includes(day)) ? classAt(classes, pid, day) : null;
 
   if (!active || !active.subject) {
@@ -107,7 +148,9 @@ function renderLiveCard(classes) {
     document.getElementById('now-teacher').textContent = '';
     document.getElementById('live-badge').classList.add('hidden');
     document.getElementById('live-actions').classList.add('hidden');
-    document.getElementById('off-hint').classList.remove('hidden');
+    const hint = document.getElementById('off-hint');
+    hint.textContent = '⏳ 本日の予定は「時間割」または「授業資料」からご確認ください。';
+    hint.classList.remove('hidden');
     return;
   }
 
@@ -167,9 +210,9 @@ function renderAnnouncements(data) {
 // ==========================================
 // 時間割
 // ==========================================
-function renderTimetable(classes) {
+function renderTimetable(classes, vacation) {
   const today = todayLabel();
-  const pid   = currentPeriodId();
+  const pid   = vacation ? null : currentPeriodId();
 
   const headerCells = DAYS.map(d => `
     <th class="border border-[#2c3614] p-3 text-sm min-w-[100px]
@@ -379,23 +422,26 @@ async function init() {
   document.getElementById('live-badge').classList.add('hidden');
   document.getElementById('live-actions').classList.add('hidden');
 
-  // 全シートを並列取得
-  const [classes, announcements, archives] = await Promise.all([
+  // 全シートを並列取得（vacationsは休暇期間の登録用シート。start/end/message列を想定）
+  const [classes, announcements, archives, vacations] = await Promise.all([
     fetchSheet('classes'),
     fetchSheet('announcements'),
     fetchSheet('archives'),
+    fetchSheet('vacations'),
   ]);
 
   // 全セクション描画
-  renderLiveCard(classes);
+  const activeVacation = getActiveVacation(vacations);
+  renderLiveCard(classes, activeVacation);
   renderAnnouncements(announcements);
-  renderTimetable(classes);
+  renderTimetable(classes, activeVacation);
   renderArchives(archives);
 
-  // 1分ごとにライブ状態を更新
+  // 1分ごとにライブ状態を更新（日付が変わって休暇に入る/明ける場合も反映されるよう毎回判定し直す）
   setInterval(() => {
-    renderLiveCard(classes);
-    renderTimetable(classes);
+    const vac = getActiveVacation(vacations);
+    renderLiveCard(classes, vac);
+    renderTimetable(classes, vac);
   }, 60 * 1000);
 
   navigate('home');
