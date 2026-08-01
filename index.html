@@ -73,6 +73,10 @@
               class="nav-btn px-4 py-2 rounded-lg font-bold hover:bg-[#4a5d23] transition">
         🗓️ 時間割
       </button>
+      <button onclick="navigate('intensive')" data-nav="intensive"
+              class="nav-btn px-4 py-2 rounded-lg font-bold hover:bg-[#4a5d23] transition">
+        🎓 集中講義
+      </button>
       <button onclick="navigate('archives')"  data-nav="archives"
               class="nav-btn px-4 py-2 rounded-lg font-bold hover:bg-[#4a5d23] transition">
         🎥 授業動画
@@ -87,6 +91,7 @@
   <div id="mobile-menu" class="hidden md:hidden bg-[#4a5d23] divide-y divide-[#2c3614]">
     <button onclick="navigate('home')"      class="block w-full text-left px-6 py-4 font-bold text-lg">🏠 ホーム</button>
     <button onclick="navigate('schedule')"  class="block w-full text-left px-6 py-4 font-bold text-lg">🗓️ 時間割</button>
+    <button onclick="navigate('intensive')" class="block w-full text-left px-6 py-4 font-bold text-lg">🎓 集中講義</button>
     <button onclick="navigate('archives')"  class="block w-full text-left px-6 py-4 font-bold text-lg">🎥 授業動画</button>
   </div>
 </header>
@@ -122,7 +127,7 @@
                        p-5 rounded-2xl font-bold text-xl transition">
           <i class="fa-solid fa-video"></i> Zoomで参加する
         </button>
-        <button onclick="navigate('materials')"
+        <button id="materials-btn" onclick="navigate('materials')"
                 class="press flex items-center justify-center gap-3
                        bg-[#8b5a2b] hover:bg-[#6b4422] text-white
                        p-5 rounded-2xl font-bold text-xl transition">
@@ -146,6 +151,18 @@
         <p class="text-gray-400">読み込み中...</p>
       </div>
     </div>
+
+    <!-- 集中講義ティザー（掲載中のみ表示） -->
+    <button id="intensive-teaser" onclick="navigate('intensive')"
+            class="hidden w-full text-left bg-[#8b5a2b] hover:bg-[#6b4422] text-white
+                   rounded-3xl shadow p-6 md:p-8 transition flex items-center justify-between gap-4">
+      <div>
+        <p class="text-sm font-bold opacity-90 mb-1">🎓 集中講義 開催中</p>
+        <p id="intensive-teaser-title" class="text-xl md:text-2xl font-black leading-tight"></p>
+        <p id="intensive-teaser-period" class="text-sm opacity-90 mt-1"></p>
+      </div>
+      <span class="text-2xl shrink-0">›</span>
+    </button>
   </section>
 
   <!-- ---- 時間割 ---- -->
@@ -155,6 +172,18 @@
         🗓️ 2026年度 前期時間割
       </h1>
       <div id="timetable-wrap" class="overflow-x-auto">
+        <p class="text-gray-400">読み込み中...</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---- 集中講義 ---- -->
+  <section id="section-intensive" class="section">
+    <div class="bg-white rounded-3xl shadow border border-gray-100 p-6 md:p-8">
+      <h1 class="text-2xl font-bold text-[#2c3614] border-b-4 border-[#8b5a2b] pb-3 mb-6">
+        🎓 集中講義
+      </h1>
+      <div id="intensive-detail">
         <p class="text-gray-400">読み込み中...</p>
       </div>
     </div>
