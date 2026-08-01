@@ -119,31 +119,52 @@ function getActiveVacation(vacations) {
 // ==========================================
 // 集中講義（intensiveシート）
 // ==========================================
-// シートは1行だけを想定。配列で来ても先頭行のみ使う。
 // 想定列：title / teacher / period / startAt / endAt / description / zoomUrl / driveUrl / youtubeUrl / archived
-function getIntensiveRow(intensive) {
-  if (Array.isArray(intensive)) return intensive[0] || null;
-  return intensive || null;
-}
-
-// 「掲載中」＝タイトルが入っていて、archivedにチェックが入っていない
-function isIntensivePublic(row) {
-  return !!(row && row.title && !toBool(row.archived));
-}
 
 // 猶予時間（分）：Zoomボタンは開始のこの分数前から押せる／終了のこの分数後まで「実施中」扱い
 const INTENSIVE_JOIN_BUFFER_MIN = 30;
 
-// 集中講義の現在の状態を判定する
+// 掲載中の集中講義リストを取得（titleがあり、archivedがFALSEのもの）
+function getPublicIntensiveList(intensiveRaw) {
+  const list = Array.isArray(intensiveRaw) ? intensiveRaw : (intensiveRaw ? [intensiveRaw] : []);
+  return list
+    .filter(row => row && row.title && !toBool(row.archived))
+    .sort((a, b) => {
+      const ta = parseDateTime(a.startAt)?.getTime() || 0;
+      const tb = parseDateTime(b.startAt)?.getTime() || 0;
+      return ta - tb;
+    });
+}
+
+// 日時文字列を各ブラウザで安定してDateオブジェクトにパース
+function parseDateTime(val) {
+  if (!val) return null;
+  const s = String(val).trim();
+  if (!s) return null;
+
+  let d = new Date(s);
+  if (!isNaN(d.getTime())) return d;
+
+  const sIso = s.replace(' ', 'T');
+  d = new Date(sIso);
+  if (!isNaN(d.getTime())) return d;
+
+  const match = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  if (match) {
+    const [_, y, m, day, h = 0, min = 0, sec = 0] = match;
+    return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(day, 10), parseInt(h, 10), parseInt(min, 10), parseInt(sec, 10));
+  }
+  return null;
+}
+
+// 集中講義単体の現在の状態を判定する
 // 'before' = まだ参加受付前 / 'live' = 参加可能（開始30分前〜終了30分後） / 'ended' = 終了（終了30分経過後） / 'none' = 対象外
 function getIntensiveWindowStatus(row) {
-  if (!isIntensivePublic(row) || !row.startAt || !row.endAt) return 'none';
-  const start = new Date(row.startAt);
-  const end   = new Date(row.endAt);
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'none';
+  if (!row || !row.title || toBool(row.archived) || !row.startAt || !row.endAt) return 'none';
+  const start = parseDateTime(row.startAt);
+  const end   = parseDateTime(row.endAt);
+  if (!start || !end) return 'none';
 
-  // startAt/endAtはDateとして比較するので、シート側がUTCシリアライズされていてもタイムゾーンのズレは発生しない
-  // （new Date(...)同士の比較は常に絶対時刻での比較になるため）
   const now      = new Date();
   const joinFrom = new Date(start.getTime() - INTENSIVE_JOIN_BUFFER_MIN * 60 * 1000);
   const endedAt  = new Date(end.getTime()   + INTENSIVE_JOIN_BUFFER_MIN * 60 * 1000);
@@ -153,10 +174,42 @@ function getIntensiveWindowStatus(row) {
   return 'ended';
 }
 
-// period欄の表示用フォーマット。
-// Googleスプレッドシートは「8/1」のような文字列を自動的に日付として解釈してしまうことがあり、
-// その場合GASからはISO日時文字列（UTC）で返ってくる。その場合はJSTに補正して「M/D」形式に戻す。
-// （period列は「Format → Number → Plain text」にしておくと、この変換自体を避けられる）
+// ホーム画面に表示すべき集中講義とそのステータスを判定
+// 次回講義の開始30分前までは、直前の講義（ended）を表示し続ける
+function getActiveIntensiveForHome(publicList) {
+  if (!publicList || !publicList.length) return { row: null, status: 'none' };
+
+  const now = new Date();
+
+  // ① 開催中（開始30分前 〜 終了30分後）の講義があるか
+  for (const row of publicList) {
+    const status = getIntensiveWindowStatus(row);
+    if (status === 'live') return { row, status: 'live' };
+  }
+
+  // ② 開催中がない場合、次回講義の開始30分前までは直前に終了した講義（ended）を表示
+  for (let i = 0; i < publicList.length; i++) {
+    const row = publicList[i];
+    if (!row.startAt) continue;
+    const start = parseDateTime(row.startAt);
+    if (!start) continue;
+    const joinFrom = new Date(start.getTime() - INTENSIVE_JOIN_BUFFER_MIN * 60 * 1000);
+
+    if (now < joinFrom) {
+      if (i > 0) {
+        return { row: publicList[i - 1], status: 'ended' };
+      } else {
+        return { row: publicList[0], status: 'before' };
+      }
+    }
+  }
+
+  // ③ すべての講義終了後
+  const lastRow = publicList[publicList.length - 1];
+  return { row: lastRow, status: 'ended' };
+}
+
+// period欄の表示用フォーマット
 function formatPeriodDisplay(val) {
   if (!val) return '';
   const s = String(val);
@@ -170,7 +223,6 @@ function formatPeriodDisplay(val) {
   return s;
 }
 
-
 // 資料ボタンを通常状態（時間割の資料ページへの導線）に戻す
 function resetMaterialsBtn() {
   const btn = document.getElementById('materials-btn');
@@ -181,7 +233,7 @@ function resetMaterialsBtn() {
   btn.innerHTML = '<i class="fa-solid fa-folder-open"></i> この授業の資料';
 }
 
-function renderLiveCard(classes, vacation, intensive) {
+function renderLiveCard(classes, vacation, intensiveList) {
   const now = new Date();
   const day = todayLabel();
   const pid = currentPeriodId();
@@ -191,13 +243,14 @@ function renderLiveCard(classes, vacation, intensive) {
     `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日（${day}）` +
     ` ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-  // ① 集中講義の実施時間帯は最優先で表示（休暇期間と重なっていてもこちらが優先）
-  const intensiveStatus = getIntensiveWindowStatus(intensive);
+  const publicIntensiveList = getPublicIntensiveList(intensiveList);
+  const { row: activeIntensive, status: intensiveStatus } = getActiveIntensiveForHome(publicIntensiveList);
 
-  if (intensiveStatus === 'live') {
-    document.getElementById('now-subject').textContent = intensive.title;
+  // ① 集中講義の実施時間帯／終了保持時間帯は最優先で表示
+  if (intensiveStatus === 'live' && activeIntensive) {
+    document.getElementById('now-subject').textContent = activeIntensive.title;
     document.getElementById('now-teacher').textContent =
-      intensive.teacher ? `担当：${intensive.teacher} 師` : '';
+      activeIntensive.teacher ? `担当：${activeIntensive.teacher} 師` : '';
     document.getElementById('live-badge').classList.remove('hidden');
     document.getElementById('vacation-badge')?.classList.add('hidden');
     document.getElementById('intensive-ended-badge')?.classList.add('hidden');
@@ -205,8 +258,8 @@ function renderLiveCard(classes, vacation, intensive) {
     document.getElementById('live-actions').classList.remove('hidden');
 
     const zoomBtn = document.getElementById('zoom-btn');
-    if (intensive.zoomUrl && String(intensive.zoomUrl).startsWith('http')) {
-      zoomBtn.onclick   = () => window.open(intensive.zoomUrl, '_blank');
+    if (activeIntensive.zoomUrl && String(activeIntensive.zoomUrl).startsWith('http')) {
+      zoomBtn.onclick   = () => window.open(activeIntensive.zoomUrl, '_blank');
       zoomBtn.disabled  = false;
       zoomBtn.classList.remove('opacity-50', 'cursor-not-allowed');
       zoomBtn.innerHTML = '<i class="fa-solid fa-video"></i> Zoomで参加する';
@@ -217,8 +270,8 @@ function renderLiveCard(classes, vacation, intensive) {
     }
 
     const materialsBtn = document.getElementById('materials-btn');
-    if (intensive.driveUrl && String(intensive.driveUrl).startsWith('http')) {
-      materialsBtn.onclick   = () => window.open(intensive.driveUrl, '_blank');
+    if (activeIntensive.driveUrl && String(activeIntensive.driveUrl).startsWith('http')) {
+      materialsBtn.onclick   = () => window.open(activeIntensive.driveUrl, '_blank');
       materialsBtn.disabled  = false;
       materialsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
       materialsBtn.innerHTML = '<i class="fa-solid fa-folder-open"></i> 集中講義の資料';
@@ -230,16 +283,27 @@ function renderLiveCard(classes, vacation, intensive) {
     return;
   }
 
-  if (intensiveStatus === 'ended') {
-    document.getElementById('now-subject').textContent = intensive.title;
+  if (intensiveStatus === 'ended' && activeIntensive) {
+    document.getElementById('now-subject').textContent = activeIntensive.title;
     document.getElementById('now-teacher').textContent =
-      intensive.teacher ? `担当：${intensive.teacher} 師` : '';
+      activeIntensive.teacher ? `担当：${activeIntensive.teacher} 師` : '';
     document.getElementById('live-badge').classList.add('hidden');
     document.getElementById('vacation-badge')?.classList.add('hidden');
     document.getElementById('intensive-ended-badge')?.classList.remove('hidden');
     document.getElementById('live-actions').classList.add('hidden');
+
     const hint = document.getElementById('off-hint');
-    hint.textContent = 'Zoomは終了しました。アーカイブは1日後までに作成されます。';
+    hint.innerHTML = `
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <span class="font-bold text-[#8b5a2b]">🎓 集中講義案内：</span>
+          リアルタイムでの授業は終了しました。YouTubeをご覧ください。
+        </div>
+        <button onclick="navigate('intensive')"
+                class="shrink-0 bg-[#8b5a2b] hover:bg-[#6b4422] text-white text-sm font-bold px-4 py-2 rounded-xl transition shadow">
+          🎓 集中講義ページを見る ›
+        </button>
+      </div>`;
     hint.classList.remove('hidden');
     resetMaterialsBtn();
     return;
@@ -247,7 +311,7 @@ function renderLiveCard(classes, vacation, intensive) {
   document.getElementById('intensive-ended-badge')?.classList.add('hidden');
   resetMaterialsBtn();
 
-  // ② 休暇期間中は放送中バッジ・Zoomボタンを出さず、専用の案内のみ表示する
+  // ② 休暇期間中
   if (vacation) {
     document.getElementById('now-subject').textContent = vacation.message || '現在は休暇期間中です';
     document.getElementById('now-teacher').textContent = '';
@@ -298,77 +362,81 @@ function renderLiveCard(classes, vacation, intensive) {
 }
 
 // ==========================================
-// 集中講義：専用ページ
+// 集中講義：専用ページ（案A：掲載中講義一覧表示）
 // ==========================================
-function renderIntensivePage(row) {
+function renderIntensivePage(intensiveRaw) {
   const el = document.getElementById('intensive-detail');
-  if (!isIntensivePublic(row)) {
+  const publicList = getPublicIntensiveList(intensiveRaw);
+
+  if (!publicList.length) {
     el.innerHTML = '<p class="text-gray-400">現在、集中講義の予定はありません。</p>';
     return;
   }
 
-  const status   = getIntensiveWindowStatus(row);
-  const hasZoom  = row.zoomUrl  && String(row.zoomUrl).startsWith('http');
-  const hasDrive = row.driveUrl && String(row.driveUrl).startsWith('http');
-
-  let zoomArea;
-  if (status === 'ended') {
-    zoomArea = `
-      <div class="p-4 bg-[#fdfbf7] rounded-xl border border-[#4a5d23]/20 text-gray-600 text-base md:col-span-2">
-        Zoomは終了しました。アーカイブは1日後までに作成されます。
-      </div>`;
-  } else if (status === 'before') {
-    zoomArea = `
-      <div class="press flex items-center justify-center gap-3 bg-gray-200 text-gray-400
-                  p-5 rounded-2xl font-bold text-xl cursor-not-allowed">
-        <i class="fa-solid fa-video"></i> 開始30分前から参加できます
-      </div>`;
-  } else if (hasZoom) {
-    zoomArea = `
-      <a href="${row.zoomUrl}" target="_blank" rel="noopener"
-         class="press flex items-center justify-center gap-3
-                bg-[#4a5d23] hover:bg-[#2c3614] text-white
-                p-5 rounded-2xl font-bold text-xl transition">
-        <i class="fa-solid fa-video"></i> Zoomで参加する
-      </a>`;
-  } else {
-    zoomArea = '';
-  }
-
-  const driveArea = hasDrive ? `
-    <a href="${row.driveUrl}" target="_blank" rel="noopener"
-       class="press flex items-center justify-center gap-3
-              bg-[#8b5a2b] hover:bg-[#6b4422] text-white
-              p-5 rounded-2xl font-bold text-xl transition">
-      <i class="fa-solid fa-folder-open"></i> 資料を見る
-    </a>` : '';
-
   el.innerHTML = `
-    <div class="bg-white border-2 border-[#8b5a2b] rounded-2xl p-6 md:p-8">
-      ${row.period ? `<p class="text-sm font-bold text-[#8b5a2b] mb-2">${formatPeriodDisplay(row.period)}</p>` : ''}
-      <h2 class="text-2xl md:text-3xl font-black text-[#2c3614] mb-2 leading-tight">${row.title}</h2>
-      ${row.teacher ? `<p class="text-gray-500 mb-4">担当：${row.teacher} 師</p>` : ''}
-      ${row.description ? `<p class="text-gray-700 leading-relaxed mb-6 whitespace-pre-wrap">${row.description}</p>` : ''}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        ${zoomArea}
-        ${driveArea}
-      </div>
-    </div>`;
-}
+    <div class="space-y-8">
+      ${publicList.map(row => {
+        const status   = getIntensiveWindowStatus(row);
+        const hasZoom  = row.zoomUrl  && String(row.zoomUrl).startsWith('http');
+        const hasDrive = row.driveUrl && String(row.driveUrl).startsWith('http');
+        const hasYoutube = row.youtubeUrl && String(row.youtubeUrl).startsWith('http');
 
-// ==========================================
-// 集中講義：ホームティザー
-// ==========================================
-function renderIntensiveTeaser(row) {
-  const card = document.getElementById('intensive-teaser');
-  if (!card) return;
-  if (!isIntensivePublic(row)) {
-    card.classList.add('hidden');
-    return;
-  }
-  card.classList.remove('hidden');
-  document.getElementById('intensive-teaser-title').textContent = row.title;
-  document.getElementById('intensive-teaser-period').textContent = formatPeriodDisplay(row.period);
+        let zoomArea = '';
+        if (status === 'live' && hasZoom) {
+          zoomArea = `
+            <a href="${row.zoomUrl}" target="_blank" rel="noopener"
+               class="press flex items-center justify-center gap-2
+                      bg-[#4a5d23] hover:bg-[#2c3614] text-white
+                      p-4 rounded-xl font-bold text-lg transition shadow">
+              <i class="fa-solid fa-video"></i> Zoomで参加する
+            </a>`;
+        } else if (status === 'before') {
+          zoomArea = `
+            <div class="flex items-center justify-center gap-2 bg-gray-100 text-gray-400
+                        p-4 rounded-xl font-bold text-base border border-gray-200">
+              <i class="fa-solid fa-video"></i> 開始30分前からZoom参加可能
+            </div>`;
+        } else if (status === 'ended') {
+          zoomArea = `
+            <div class="flex items-center justify-center gap-2 bg-gray-50 text-gray-500
+                        p-4 rounded-xl text-sm border border-gray-200">
+              <i class="fa-solid fa-check-circle"></i> リアルタイム授業は終了しました
+            </div>`;
+        }
+
+        const driveArea = hasDrive ? `
+          <a href="${row.driveUrl}" target="_blank" rel="noopener"
+             class="press flex items-center justify-center gap-2
+                    bg-[#8b5a2b] hover:bg-[#6b4422] text-white
+                    p-4 rounded-xl font-bold text-lg transition shadow">
+            <i class="fa-solid fa-folder-open"></i> 資料を見る
+          </a>` : '';
+
+        const youtubeArea = hasYoutube ? `
+          <a href="${row.youtubeUrl}" target="_blank" rel="noopener"
+             class="press flex items-center justify-center gap-2
+                    bg-red-600 hover:bg-red-700 text-white
+                    p-4 rounded-xl font-bold text-lg transition shadow">
+            <i class="fa-brands fa-youtube"></i> YouTubeを見る
+          </a>` : '';
+
+        return `
+          <div class="bg-white border-2 ${status === 'live' ? 'border-[#4a5d23] ring-4 ring-[#4a5d23]/10' : 'border-[#8b5a2b]/40'} rounded-3xl p-6 md:p-8 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              ${row.period ? `<span class="bg-[#8b5a2b] text-white text-xs font-bold px-3 py-1 rounded-full">${formatPeriodDisplay(row.period)}</span>` : ''}
+              ${status === 'live' ? '<span class="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full blink">● 現在開講中</span>' : ''}
+            </div>
+            <h2 class="text-2xl md:text-3xl font-black text-[#2c3614] mb-2 leading-tight">${row.title}</h2>
+            ${row.teacher ? `<p class="text-gray-600 font-bold mb-4">担当：${row.teacher} 師</p>` : ''}
+            ${row.description ? `<p class="text-gray-700 leading-relaxed mb-6 whitespace-pre-wrap text-base">${row.description}</p>` : ''}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              ${zoomArea}
+              ${driveArea}
+              ${youtubeArea}
+            </div>
+          </div>`;
+      }).join('')}
+    </div>`;
 }
 
 
@@ -559,20 +627,24 @@ function renderMaterials(classes) {
 // ==========================================
 // 授業動画アーカイブ
 // ==========================================
-function renderArchives(data, intensive) {
+function renderArchives(data, intensiveRaw) {
   const el = document.getElementById('archives-list');
 
   const items = Array.isArray(data) ? [...data] : [];
+  const list = Array.isArray(intensiveRaw) ? intensiveRaw : (intensiveRaw ? [intensiveRaw] : []);
+  
   // アーカイブ済みの集中講義があれば先頭に合流させる
-  if (intensive && intensive.title && toBool(intensive.archived)) {
-    items.unshift({
-      subject: intensive.title,
-      teacher: intensive.teacher,
-      youtubeUrl: intensive.youtubeUrl,
-      driveUrl: intensive.driveUrl,
-      isIntensive: true,
-    });
-  }
+  list.forEach(row => {
+    if (row && row.title && toBool(row.archived)) {
+      items.unshift({
+        subject: row.title,
+        teacher: row.teacher,
+        youtubeUrl: row.youtubeUrl,
+        driveUrl: row.driveUrl,
+        isIntensive: true,
+      });
+    }
+  });
 
   if (!items.length) {
     el.innerHTML = '<p class="text-gray-400 col-span-3">動画はまだ登録されていません。</p>';
@@ -649,23 +721,20 @@ async function init() {
     fetchSheet('intensive'),
   ]);
 
-  const intensive = getIntensiveRow(intensiveRaw);
-
   // 全セクション描画
   const activeVacation = getActiveVacation(vacations);
-  renderLiveCard(classes, activeVacation, intensive);
+  renderLiveCard(classes, activeVacation, intensiveRaw);
   renderAnnouncements(announcements);
   renderTimetable(classes, activeVacation);
-  renderArchives(archives, intensive);
-  renderIntensivePage(intensive);
-  renderIntensiveTeaser(intensive);
+  renderArchives(archives, intensiveRaw);
+  renderIntensivePage(intensiveRaw);
 
   // 1分ごとにライブ状態を更新（休暇・集中講義とも日時をまたぐ切り替えに追随させる）
   setInterval(() => {
     const vac = getActiveVacation(vacations);
-    renderLiveCard(classes, vac, intensive);
+    renderLiveCard(classes, vac, intensiveRaw);
     renderTimetable(classes, vac);
-    renderIntensivePage(intensive);
+    renderIntensivePage(intensiveRaw);
   }, 60 * 1000);
 
   navigate('home');
