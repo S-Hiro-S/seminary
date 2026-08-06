@@ -1,66 +1,49 @@
 // ==========================================
 // 設定
 // ==========================================
-const API = 'https://script.google.com/macros/s/AKfycbxQDXKnv25TXoml5LjmyAkWP7DiFhFCYUGbBFWJJsK0tMI_5ROesPQSjsZNe-YTKQ/exec';
-const TTL = 5 * 60 * 1000; // キャッシュ有効期間：5分
-
 const DAYS = ['火', '水', '木', '金', '土'];
 const PERIODS = [
-  { id: 'p1',     label: '1〜2時限', time: '9:00〜10:30'  },
+  { id: 'p1', label: '1〜2時限', time: '9:00〜10:30' },
   { id: 'chapel', label: 'チャペル', time: '10:35〜11:00' },
-  { id: 'p2',     label: '3〜4時限', time: '11:05〜12:35' },
+  { id: 'p2', label: '3〜4時限', time: '11:05〜12:35' },
 ];
 const PERIOD_RANGE = {
-  p1:     { start: 540, end: 630 },
+  p1: { start: 540, end: 630 },
   chapel: { start: 635, end: 660 },
-  p2:     { start: 665, end: 755 },
+  p2: { start: 665, end: 755 },
 };
 
 // ==========================================
-// データ取得（JSONP + localStorage キャッシュ）
+// データ取得（静的JSON + localStorage キャッシュフォールバック）
 // ==========================================
-function fetchSheet(sheet) {
+async function fetchSheet(sheet) {
   const key = `seminary_${sheet}`;
 
-  // キャッシュが有効なら即返す
   try {
-    const cached = localStorage.getItem(key);
-    if (cached) {
-      const { data, ts } = JSON.parse(cached);
-      if (Date.now() - ts < TTL) return Promise.resolve(data);
+    // 静的JSONファイルを取得 (キャッシュバスティング用タイムスタンプ付与)
+    const res = await fetch(`./data/${sheet}.json?t=${Date.now()}`);
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
     }
-  } catch (_) {}
+    const data = await res.json();
 
-  return new Promise((resolve) => {
-    const cbName = `_seminary_cb_${sheet}_${Date.now()}`;
+    // 成功したデータを localStorage にキャッシュ
+    try {
+      localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
+    } catch (_) { }
 
-    // コールバック関数を一時登録
-    window[cbName] = (data) => {
-      delete window[cbName];
-      const el = document.getElementById(cbName);
-      if (el) el.remove();
-      try {
-        localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() }));
-      } catch (_) {}
-      resolve(Array.isArray(data) ? data : []);
-    };
-
-    // scriptタグでJSONP呼び出し
-    const script    = document.createElement('script');
-    script.id       = cbName;
-    script.src      = `${API}?sheet=${sheet}&callback=${cbName}`;
-    script.onerror  = () => {
-      console.warn(`[${sheet}] JSONP失敗。キャッシュを使用します。`);
-      delete window[cbName];
-      try {
-        const cached = localStorage.getItem(key);
-        resolve(cached ? JSON.parse(cached).data : []);
-      } catch (_) {
-        resolve([]);
+    return Array.isArray(data) ? data : (data || []);
+  } catch (err) {
+    console.warn(`[${sheet}] 静的JSONの取得に失敗しました。キャッシュを使用します:`, err);
+    try {
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const { data } = JSON.parse(cached);
+        return Array.isArray(data) ? data : (data || []);
       }
-    };
-    document.head.appendChild(script);
-  });
+    } catch (_) { }
+    return [];
+  }
 }
 
 // ==========================================
@@ -71,7 +54,7 @@ function todayLabel() {
 }
 
 function currentPeriodId() {
-  const now  = new Date();
+  const now = new Date();
   const mins = now.getHours() * 60 + now.getMinutes();
   for (const [id, { start, end }] of Object.entries(PERIOD_RANGE)) {
     if (mins >= start && mins <= end) return id;
@@ -111,7 +94,7 @@ function getActiveVacation(vacations) {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   return vacations.find(v => {
     const start = toDateOnly(v.start);
-    const end   = toDateOnly(v.end);
+    const end = toDateOnly(v.end);
     return start && end && todayStr >= start && todayStr <= end;
   }) || null;
 }
@@ -162,12 +145,12 @@ function parseDateTime(val) {
 function getIntensiveWindowStatus(row) {
   if (!row || !row.title || toBool(row.archived) || !row.startAt || !row.endAt) return 'none';
   const start = parseDateTime(row.startAt);
-  const end   = parseDateTime(row.endAt);
+  const end = parseDateTime(row.endAt);
   if (!start || !end) return 'none';
 
-  const now      = new Date();
+  const now = new Date();
   const joinFrom = new Date(start.getTime() - INTENSIVE_JOIN_BUFFER_MIN * 60 * 1000);
-  const endedAt  = new Date(end.getTime()   + INTENSIVE_JOIN_BUFFER_MIN * 60 * 1000);
+  const endedAt = new Date(end.getTime() + INTENSIVE_JOIN_BUFFER_MIN * 60 * 1000);
 
   if (now < joinFrom) return 'before';
   if (now <= endedAt) return 'live';
@@ -259,24 +242,24 @@ function renderLiveCard(classes, vacation, intensiveList) {
 
     const zoomBtn = document.getElementById('zoom-btn');
     if (activeIntensive.zoomUrl && String(activeIntensive.zoomUrl).startsWith('http')) {
-      zoomBtn.onclick   = () => window.open(activeIntensive.zoomUrl, '_blank');
-      zoomBtn.disabled  = false;
+      zoomBtn.onclick = () => window.open(activeIntensive.zoomUrl, '_blank');
+      zoomBtn.disabled = false;
       zoomBtn.classList.remove('opacity-50', 'cursor-not-allowed');
       zoomBtn.innerHTML = '<i class="fa-solid fa-video"></i> Zoomで参加する';
     } else {
-      zoomBtn.disabled  = true;
+      zoomBtn.disabled = true;
       zoomBtn.innerHTML = 'Zoom URL 未設定';
       zoomBtn.classList.add('opacity-50', 'cursor-not-allowed');
     }
 
     const materialsBtn = document.getElementById('materials-btn');
     if (activeIntensive.driveUrl && String(activeIntensive.driveUrl).startsWith('http')) {
-      materialsBtn.onclick   = () => window.open(activeIntensive.driveUrl, '_blank');
-      materialsBtn.disabled  = false;
+      materialsBtn.onclick = () => window.open(activeIntensive.driveUrl, '_blank');
+      materialsBtn.disabled = false;
       materialsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
       materialsBtn.innerHTML = '<i class="fa-solid fa-folder-open"></i> 集中講義の資料';
     } else {
-      materialsBtn.disabled  = true;
+      materialsBtn.disabled = true;
       materialsBtn.classList.add('opacity-50', 'cursor-not-allowed');
       materialsBtn.innerHTML = '<i class="fa-solid fa-folder-open"></i> 資料未設定';
     }
@@ -350,11 +333,11 @@ function renderLiveCard(classes, vacation, intensiveList) {
     document.getElementById('live-actions').classList.remove('hidden');
     const zoomBtn = document.getElementById('zoom-btn');
     if (active.zoomUrl && String(active.zoomUrl).startsWith('http')) {
-      zoomBtn.onclick   = () => window.open(active.zoomUrl, '_blank');
-      zoomBtn.disabled  = false;
+      zoomBtn.onclick = () => window.open(active.zoomUrl, '_blank');
+      zoomBtn.disabled = false;
       zoomBtn.innerHTML = '<i class="fa-solid fa-video"></i> Zoomで参加する';
     } else {
-      zoomBtn.disabled  = true;
+      zoomBtn.disabled = true;
       zoomBtn.innerHTML = 'Zoom URL 未設定';
       zoomBtn.classList.add('opacity-50', 'cursor-not-allowed');
     }
@@ -376,35 +359,35 @@ function renderIntensivePage(intensiveRaw) {
   el.innerHTML = `
     <div class="space-y-8">
       ${publicList.map(row => {
-        const status   = getIntensiveWindowStatus(row);
-        const hasZoom  = row.zoomUrl  && String(row.zoomUrl).startsWith('http');
-        const hasDrive = row.driveUrl && String(row.driveUrl).startsWith('http');
-        const hasYoutube = row.youtubeUrl && String(row.youtubeUrl).startsWith('http');
+    const status = getIntensiveWindowStatus(row);
+    const hasZoom = row.zoomUrl && String(row.zoomUrl).startsWith('http');
+    const hasDrive = row.driveUrl && String(row.driveUrl).startsWith('http');
+    const hasYoutube = row.youtubeUrl && String(row.youtubeUrl).startsWith('http');
 
-        let zoomArea = '';
-        if (status === 'live' && hasZoom) {
-          zoomArea = `
+    let zoomArea = '';
+    if (status === 'live' && hasZoom) {
+      zoomArea = `
             <a href="${row.zoomUrl}" target="_blank" rel="noopener"
                class="press flex items-center justify-center gap-2
                       bg-[#4a5d23] hover:bg-[#2c3614] text-white
                       p-4 rounded-xl font-bold text-lg transition shadow">
               <i class="fa-solid fa-video"></i> Zoomで参加する
             </a>`;
-        } else if (status === 'before') {
-          zoomArea = `
+    } else if (status === 'before') {
+      zoomArea = `
             <div class="flex items-center justify-center gap-2 bg-gray-100 text-gray-400
                         p-4 rounded-xl font-bold text-base border border-gray-200">
               <i class="fa-solid fa-video"></i> 開始30分前からZoom参加可能
             </div>`;
-        } else if (status === 'ended') {
-          zoomArea = `
+    } else if (status === 'ended') {
+      zoomArea = `
             <div class="flex items-center justify-center gap-2 bg-gray-50 text-gray-500
                         p-4 rounded-xl text-sm border border-gray-200">
               <i class="fa-solid fa-check-circle"></i> リアルタイム授業は終了しました
             </div>`;
-        }
+    }
 
-        const driveArea = hasDrive ? `
+    const driveArea = hasDrive ? `
           <a href="${row.driveUrl}" target="_blank" rel="noopener"
              class="press flex items-center justify-center gap-2
                     bg-[#8b5a2b] hover:bg-[#6b4422] text-white
@@ -412,7 +395,7 @@ function renderIntensivePage(intensiveRaw) {
             <i class="fa-solid fa-folder-open"></i> 資料を見る
           </a>` : '';
 
-        const youtubeArea = hasYoutube ? `
+    const youtubeArea = hasYoutube ? `
           <a href="${row.youtubeUrl}" target="_blank" rel="noopener"
              class="press flex items-center justify-center gap-2
                     bg-red-600 hover:bg-red-700 text-white
@@ -420,7 +403,7 @@ function renderIntensivePage(intensiveRaw) {
             <i class="fa-brands fa-youtube"></i> YouTubeを見る
           </a>` : '';
 
-        return `
+    return `
           <div class="bg-white border-2 ${status === 'live' ? 'border-[#4a5d23] ring-4 ring-[#4a5d23]/10' : 'border-[#8b5a2b]/40'} rounded-3xl p-6 md:p-8 shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
               ${row.period ? `<span class="bg-[#8b5a2b] text-white text-xs font-bold px-3 py-1 rounded-full">${formatPeriodDisplay(row.period)}</span>` : ''}
@@ -435,7 +418,7 @@ function renderIntensivePage(intensiveRaw) {
               ${youtubeArea}
             </div>
           </div>`;
-      }).join('')}
+  }).join('')}
     </div>`;
 }
 
@@ -451,7 +434,7 @@ function formatDate(str) {
 }
 
 function renderAnnouncements(data) {
-  const el     = document.getElementById('announcements-list');
+  const el = document.getElementById('announcements-list');
   const active = data.filter(a => toBool(a.active));
 
   if (!active.length) {
@@ -473,7 +456,7 @@ function renderAnnouncements(data) {
 // ==========================================
 function renderTimetable(classes, vacation) {
   const today = todayLabel();
-  const pid   = vacation ? null : currentPeriodId();
+  const pid = vacation ? null : currentPeriodId();
 
   const headerCells = DAYS.map(d => `
     <th class="border border-[#2c3614] p-3 text-sm min-w-[100px]
@@ -482,13 +465,13 @@ function renderTimetable(classes, vacation) {
 
   const bodyRows = PERIODS.map(p => {
     const cells = DAYS.map(d => {
-      const cls      = classAt(classes, p.id, d);
-      const isToday  = d === today;
+      const cls = classAt(classes, p.id, d);
+      const isToday = d === today;
       const isActive = isToday && pid === p.id;
-      const tdCls    = [
+      const tdCls = [
         'border border-gray-200 p-2 align-top text-center',
-        isToday  ? 'today-col'  : '',
-        isActive ? 'live-cell'  : '',
+        isToday ? 'today-col' : '',
+        isActive ? 'live-cell' : '',
       ].join(' ');
 
       // 空セル（授業なし）― リンクスロット2行分を確保して高さを揃える
@@ -504,7 +487,7 @@ function renderTimetable(classes, vacation) {
         </td>`;
       }
 
-      const hasZoom  = cls.zoomUrl  && String(cls.zoomUrl).startsWith('http');
+      const hasZoom = cls.zoomUrl && String(cls.zoomUrl).startsWith('http');
       const hasDrive = cls.driveUrl && String(cls.driveUrl).startsWith('http');
 
       // Zoomスロット：リンクがなくても同じ高さのspanを置く
@@ -532,12 +515,12 @@ function renderTimetable(classes, vacation) {
             <!-- 上段：科目・担当（上揃え・横センター） -->
             <div class="flex-1 flex flex-col items-center text-center px-2 pt-3 pb-1">
               ${p.id !== 'chapel'
-                ? (toBool(cls.isPublic)
-                    ? '<span class="text-[10px] text-[#4a5d23] font-bold mb-1" style="height:1.2rem;display:block">📢 公開授業</span>'
-                    : '<span style="height:1.2rem;display:block"></span>')
-                : ''}
+          ? (toBool(cls.isPublic)
+            ? '<span class="text-[10px] text-[#4a5d23] font-bold mb-1" style="height:1.2rem;display:block">📢 公開授業</span>'
+            : '<span style="height:1.2rem;display:block"></span>')
+          : ''}
               <span class="font-bold text-sm leading-snug">${cls.subject}</span>
-              ${cls.note    ? `<span class="text-xs text-gray-400 mt-0.5">${cls.note}</span>`    : ''}
+              ${cls.note ? `<span class="text-xs text-gray-400 mt-0.5">${cls.note}</span>` : ''}
               ${cls.teacher ? `<span class="text-xs text-gray-500 mt-1">${cls.teacher}</span>` : ''}
             </div>
 
@@ -578,14 +561,14 @@ function renderTimetable(classes, vacation) {
 // ==========================================
 function renderMaterials(classes) {
   const today = todayLabel();
-  const el    = document.getElementById('materials-list');
+  const el = document.getElementById('materials-list');
 
   el.innerHTML = DAYS.map(day => {
     const isToday = day === today;
-    const dayCls  = classes.filter(c => c.day === day && c.period !== 'chapel');
+    const dayCls = classes.filter(c => c.day === day && c.period !== 'chapel');
 
     const cards = dayCls.map(cls => {
-      const period   = PERIODS.find(p => p.id === cls.period);
+      const period = PERIODS.find(p => p.id === cls.period);
       const hasDrive = cls.driveUrl && String(cls.driveUrl).startsWith('http');
       return `
         <div class="bg-white border-2 ${isToday ? 'border-[#8b5a2b]' : 'border-gray-100'}
@@ -598,12 +581,12 @@ function renderMaterials(classes) {
           </p>
           <p class="text-sm text-gray-500 mt-1">担当：${cls.teacher} 師</p>
           ${hasDrive
-            ? `<a href="${cls.driveUrl}" target="_blank" rel="noopener"
+          ? `<a href="${cls.driveUrl}" target="_blank" rel="noopener"
                   class="mt-3 inline-flex items-center gap-2 text-[#4a5d23] font-bold text-sm hover:underline">
                  <i class="fa-solid fa-folder-open"></i> 資料を開く
                </a>`
-            : `<p class="mt-3 text-xs text-gray-400">資料は登録されておりません</p>`
-          }
+          : `<p class="mt-3 text-xs text-gray-400">資料は登録されておりません</p>`
+        }
         </div>`;
     }).join('') || '<p class="text-gray-300 text-sm">この曜日に授業はありません。</p>';
 
@@ -616,8 +599,8 @@ function renderMaterials(classes) {
             ${day}曜日
           </span>
           ${isToday
-            ? '<span class="bg-[#8b5a2b] text-white text-xs px-2 py-0.5 rounded-full font-bold">本日</span>'
-            : ''}
+        ? '<span class="bg-[#8b5a2b] text-white text-xs px-2 py-0.5 rounded-full font-bold">本日</span>'
+        : ''}
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">${cards}</div>
       </div>`;
@@ -632,7 +615,7 @@ function renderArchives(data, intensiveRaw) {
 
   const items = Array.isArray(data) ? [...data] : [];
   const list = Array.isArray(intensiveRaw) ? intensiveRaw : (intensiveRaw ? [intensiveRaw] : []);
-  
+
   // アーカイブ済みの集中講義があれば先頭に合流させる
   list.forEach(row => {
     if (row && row.title && toBool(row.archived)) {
@@ -705,7 +688,7 @@ async function init() {
   });
 
   // 読み込み中表示（データ取得前）
-  document.getElementById('now-time').textContent    = '';
+  document.getElementById('now-time').textContent = '';
   document.getElementById('now-subject').textContent = '読み込み中...';
   document.getElementById('now-teacher').textContent = '';
   document.getElementById('off-hint').classList.add('hidden');
