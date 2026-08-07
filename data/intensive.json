@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "title": "教義学：信条・信仰告白のすゝめ",
+    "teacher": "田口聖",
+    "period": "8/1",
+    "startAt": "2026-08-01 9:00",
+    "endAt": "2026-08-01 11:30",
+    "description": "",
+    "zoomUrl": "https://us02web.zoom.us/j/89316135898?",
+    "driveUrl": "https://drive.google.com/open?id=1y5pjAFzUeMSuzzWt_PHQe6GbG2GjuoFV&usp=drive_fs",
+    "youtubeUrl": "https://youtu.be/Eos5z_Q4HqQ",
+    "archived": false
+  },
+  {
+    "title": "聖書神学:知恵文学~箴言・伝道者の書・ヨブ記・雅歌~のすすめ",
+    "teacher": "銭谷幸器",
+    "period": "8/8",
+    "startAt": "2026-08-08 9:00",
+    "endAt": "2026-08-08 12:30",
+    "description": "",
+    "zoomUrl": "https://us02web.zoom.us/j/89316135898?",
+    "driveUrl": "https://drive.google.com/open?id=1s3xTSPLb-BeMzfM3JGf0RdMVp-DLL0HV&usp=drive_fs",
+    "youtubeUrl": "",
+    "archived": false
+  },
+  {
+    "title": "歴史神学:初期米国ルーテル同胞教会史のすゝめ",
+    "teacher": "金田与施夫",
+    "period": "8/15",
+    "startAt": "2026-08-15 9:00",
+    "endAt": "2026-08-15 11:30",
+    "description": "",
+    "zoomUrl": "https://us02web.zoom.us/j/89316135898?",
+    "driveUrl": "",
+    "youtubeUrl": "",
+    "archived": false
+  }
+]
