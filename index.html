@@ -130,6 +130,24 @@
     <!-- ---- ホーム ---- -->
     <section id="section-home" class="section active space-y-8">
 
+      <!-- 集中講義案内・アーカイブバナー（設定期間中のみ表示） -->
+      <div id="intensive-banner"
+        class="hidden bg-gradient-to-r from-[#8b5a2b] to-[#6b4422] text-white rounded-3xl p-6 md:p-8 shadow-lg transition">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">お知らせ</span>
+              <h3 id="intensive-banner-title" class="text-xl md:text-2xl font-black tracking-tight"></h3>
+            </div>
+            <p id="intensive-banner-message" class="text-white/90 text-sm md:text-base leading-relaxed"></p>
+          </div>
+          <button onclick="navigate('intensive')"
+            class="shrink-0 press bg-white hover:bg-amber-50 text-[#6b4422] font-black text-sm md:text-base px-6 py-3 rounded-2xl transition shadow flex items-center gap-2">
+            <span id="intensive-banner-btn-text">集中講義ページを見る ›</span>
+          </button>
+        </div>
+      </div>
+
       <!-- ライブカード -->
       <div class="bg-white rounded-3xl shadow-xl border-2 border-[#4a5d23] p-6 md:p-10 relative">
         <span id="live-badge"

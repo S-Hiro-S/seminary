@@ -157,39 +157,60 @@ function getIntensiveWindowStatus(row) {
   return 'ended';
 }
 
-// ホーム画面に表示すべき集中講義とそのステータスを判定
-// 次回講義の開始30分前までは、直前の講義（ended）を表示し続ける
+// ホーム画面のライブカードで表示すべき集中講義とそのステータスを判定
+// リアルタイム開講中（開始30分前〜終了30分後）のみ最優先で表示し、それ以外は通常授業へ回す
 function getActiveIntensiveForHome(publicList) {
   if (!publicList || !publicList.length) return { row: null, status: 'none' };
 
-  const now = new Date();
-
-  // ① 開催中（開始30分前 〜 終了30分後）の講義があるか
   for (const row of publicList) {
     const status = getIntensiveWindowStatus(row);
     if (status === 'live') return { row, status: 'live' };
   }
 
-  // ② 開催中がない場合、次回講義の開始30分前までは直前に終了した講義（ended）を表示
-  for (let i = 0; i < publicList.length; i++) {
-    const row = publicList[i];
-    if (!row.startAt) continue;
-    const start = parseDateTime(row.startAt);
-    if (!start) continue;
-    const joinFrom = new Date(start.getTime() - INTENSIVE_JOIN_BUFFER_MIN * 60 * 1000);
+  return { row: null, status: 'none' };
+}
 
-    if (now < joinFrom) {
-      if (i > 0) {
-        return { row: publicList[i - 1], status: 'ended' };
-      } else {
-        return { row: publicList[0], status: 'before' };
-      }
-    }
+// 集中講義案内・アーカイブバナーの描画（intensive_banner.json の設定に基づく）
+function renderIntensiveBanner(config) {
+  const bannerEl = document.getElementById('intensive-banner');
+  if (!bannerEl) return;
+
+  if (!config || typeof config !== 'object' || (Array.isArray(config) && !config.length)) {
+    bannerEl.classList.add('hidden');
+    return;
   }
 
-  // ③ すべての講義終了後
-  const lastRow = publicList[publicList.length - 1];
-  return { row: lastRow, status: 'ended' };
+  // 配列で届いた場合は先頭要素を採用、オブジェクトならそのまま採用
+  const c = Array.isArray(config) ? config[0] : config;
+  if (!c || c.enabled === false || String(c.enabled).toLowerCase() === 'false') {
+    bannerEl.classList.add('hidden');
+    return;
+  }
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const start = toDateOnly(c.startDate || c.start);
+  const end = toDateOnly(c.endDate || c.end);
+
+  if (start && todayStr < start) {
+    bannerEl.classList.add('hidden');
+    return;
+  }
+  if (end && todayStr > end) {
+    bannerEl.classList.add('hidden');
+    return;
+  }
+
+  // 期間内：表示
+  const titleEl = document.getElementById('intensive-banner-title');
+  const msgEl = document.getElementById('intensive-banner-message');
+  const btnTextEl = document.getElementById('intensive-banner-btn-text');
+
+  if (titleEl) titleEl.textContent = c.title || '🎓 集中講義アーカイブ・講義資料 公開中';
+  if (msgEl) msgEl.textContent = c.message || '集中講義の授業動画および講義資料を公開しています。';
+  if (btnTextEl) btnTextEl.textContent = c.buttonText || '集中講義ページを見る ›';
+
+  bannerEl.classList.remove('hidden');
 }
 
 // period欄の表示用フォーマット
@@ -695,16 +716,18 @@ async function init() {
   document.getElementById('live-badge').classList.add('hidden');
   document.getElementById('live-actions').classList.add('hidden');
 
-  // 全シートを並列取得（vacationsは休暇期間、intensiveは集中講義の登録用シート）
-  const [classes, announcements, archives, vacations, intensiveRaw] = await Promise.all([
+  // 全シート/設定を並列取得
+  const [classes, announcements, archives, vacations, intensiveRaw, intensiveBanner] = await Promise.all([
     fetchSheet('classes'),
     fetchSheet('announcements'),
     fetchSheet('archives'),
     fetchSheet('vacations'),
     fetchSheet('intensive'),
+    fetchSheet('intensive_banner'),
   ]);
 
   // 全セクション描画
+  renderIntensiveBanner(intensiveBanner);
   const activeVacation = getActiveVacation(vacations);
   renderLiveCard(classes, activeVacation, intensiveRaw);
   renderAnnouncements(announcements);
@@ -714,6 +737,7 @@ async function init() {
 
   // 1分ごとにライブ状態を更新（休暇・集中講義とも日時をまたぐ切り替えに追随させる）
   setInterval(() => {
+    renderIntensiveBanner(intensiveBanner);
     const vac = getActiveVacation(vacations);
     renderLiveCard(classes, vac, intensiveRaw);
     renderTimetable(classes, vac);
