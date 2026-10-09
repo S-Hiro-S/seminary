@@ -2,52 +2,52 @@
   {
     "period": "p1",
     "day": "火",
-    "subject": "キリスト者の自由II",
+    "subject": "小教理問答書Ⅲ(1限のみ)",
     "teacher": "銭谷 幸器",
     "isPublic": true,
-    "note": "後半",
+    "note": "「主の祈り」 ",
     "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09",
-    "driveUrl": "https://drive.google.com/xxx"
+    "driveUrl": ""
   },
   {
     "period": "p1",
     "day": "水",
-    "subject": "キリスト教倫理",
-    "teacher": "金田与施夫",
+    "subject": "関係規則等",
+    "teacher": "金田 与施夫",
     "isPublic": false,
     "note": "",
-    "zoomUrl": "https://us02web.zoom.us/j/89421965352?pwd=Ymc1Y1BrZHdaTi9IdHhJZ1d1NEVidz09",
+    "zoomUrl": "",
     "driveUrl": ""
   },
   {
     "period": "p1",
     "day": "木",
-    "subject": "詩篇講解II",
+    "subject": "ルター派礼拝学",
     "teacher": "銭谷 幸器",
-    "isPublic": true,
-    "note": "第二巻(41-72篇)",
-    "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09",
-    "driveUrl": "https://drive.google.com/xxx"
+    "isPublic": false,
+    "note": "新規科目",
+    "zoomUrl": "",
+    "driveUrl": ""
   },
   {
     "period": "p1",
     "day": "金",
-    "subject": "教義学Ⅰ",
+    "subject": "教義学Ⅱ",
     "teacher": "田口 聖",
     "isPublic": false,
-    "note": "神学科2年のみ",
-    "zoomUrl": "https://us02web.zoom.us/j/89421965352?pwd=Ymc1Y1BrZHdaTi9IdHhJZ1d1NEVidz09",
+    "note": "",
+    "zoomUrl": "",
     "driveUrl": ""
   },
   {
     "period": "p1",
     "day": "土",
-    "subject": "キリスト者の自由I",
+    "subject": "キリスト者の自由Ⅱ",
     "teacher": "銭谷 幸器",
     "isPublic": true,
-    "note": "",
+    "note": "(後半)",
     "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09",
-    "driveUrl": "https://drive.google.com/xxx"
+    "driveUrl": ""
   },
   {
     "period": "chapel",
@@ -102,51 +102,51 @@
   {
     "period": "p2",
     "day": "火",
-    "subject": "小教理問答書II",
+    "subject": "詩篇講解Ⅲ(2-4限)",
     "teacher": "銭谷 幸器",
     "isPublic": true,
-    "note": "使徒信条",
+    "note": "第三巻(73～89篇)",
     "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09",
-    "driveUrl": "https://drive.google.com/xxx"
+    "driveUrl": ""
   },
   {
     "period": "p2",
     "day": "水",
-    "subject": "ルター派説教学",
+    "subject": "説教演習",
     "teacher": "銭谷 幸器",
     "isPublic": false,
     "note": "",
-    "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09",
-    "driveUrl": "https://drive.google.com/xxx"
+    "zoomUrl": "",
+    "driveUrl": ""
   },
   {
     "period": "p2",
     "day": "木",
-    "subject": "雅歌講解",
+    "subject": "ルター派教会論",
     "teacher": "銭谷 幸器",
-    "isPublic": true,
-    "note": "神は愛なり",
-    "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09",
-    "driveUrl": "https://drive.google.com/xxx"
+    "isPublic": false,
+    "note": "",
+    "zoomUrl": "",
+    "driveUrl": ""
   },
   {
     "period": "p2",
     "day": "金",
-    "subject": "一致信条",
+    "subject": "一致信条Ⅱ",
     "teacher": "田口 聖",
     "isPublic": false,
-    "note": "神学科2年のみ",
-    "zoomUrl": "https://us02web.zoom.us/j/89421965352?pwd=Ymc1Y1BrZHdaTi9IdHhJZ1d1NEVidz09",
+    "note": "",
+    "zoomUrl": "",
     "driveUrl": ""
   },
   {
     "period": "p2",
     "day": "土",
-    "subject": "小教理問答書Ⅲ",
+    "subject": "小教理問答書Ⅳ(3限のみ)",
     "teacher": "銭谷 幸器",
     "isPublic": true,
-    "note": "主の祈り",
+    "note": "洗礼・聖餐",
     "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09",
-    "driveUrl": "https://drive.google.com/xxx"
+    "driveUrl": ""
   }
 ]
