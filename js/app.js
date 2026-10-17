@@ -342,17 +342,28 @@ function renderLiveCard(classes, vacation, intensiveList) {
   document.getElementById('live-badge').classList.remove('hidden');
   document.getElementById('off-hint').classList.add('hidden');
 
-  document.getElementById('live-actions').classList.remove('hidden');
-  const zoomBtn = document.getElementById('zoom-btn');
-  if (active.zoomUrl && String(active.zoomUrl).startsWith('http')) {
-    zoomBtn.onclick = () => window.open(active.zoomUrl, '_blank');
-    zoomBtn.disabled = false;
-    zoomBtn.innerHTML = '<i class="fa-solid fa-video"></i> Zoomで参加する';
-    zoomBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+  // 公開講座の場合のみZoomボタンを表示
+  const isPublicClass = toBool(active.isPublic);
+
+  if (isPublicClass) {
+    document.getElementById('live-actions').classList.remove('hidden');
+    const zoomBtn = document.getElementById('zoom-btn');
+    if (active.zoomUrl && String(active.zoomUrl).startsWith('http')) {
+      zoomBtn.onclick = () => window.open(active.zoomUrl, '_blank');
+      zoomBtn.disabled = false;
+      zoomBtn.innerHTML = '<i class="fa-solid fa-video"></i> Zoomで参加する（公開講座）';
+      zoomBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+      zoomBtn.disabled = true;
+      zoomBtn.innerHTML = 'Zoom URL 未設定';
+      zoomBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
   } else {
-    zoomBtn.disabled = true;
-    zoomBtn.innerHTML = 'Zoom URL 未設定';
-    zoomBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    // 非公開授業・チャペル（受講生・関係者限定）
+    document.getElementById('live-actions').classList.add('hidden');
+    const hint = document.getElementById('off-hint');
+    hint.innerHTML = '🔒 <strong>神学生・受講生限定の授業です。</strong><br><span class="text-xs text-gray-500">Zoomの参加情報は受講登録者へ直接案内されています。一般の方は参加いただけません。</span>';
+    hint.classList.remove('hidden');
   }
 }
 
@@ -520,13 +531,15 @@ function renderTimetable(classes, vacation) {
         isActive ? 'live-cell' : '',
       ].join(' ');
 
-      const hasZoom = cls.zoomUrl && String(cls.zoomUrl).startsWith('http');
+      // Zoomスロット（公開講座のみ表示）
+      const isPublicClass = toBool(cls.isPublic);
+      const hasZoom = isPublicClass && cls.zoomUrl && String(cls.zoomUrl).startsWith('http');
 
       // Zoomスロット
       const zoomSlot = hasZoom
         ? `<a href="${cls.zoomUrl}" target="_blank" rel="noopener"
               style="height:1.4rem;display:flex;align-items:center;justify-content:center;gap:4px"
-              class="text-[#4a5d23] font-bold text-xs hover:underline bg-[#4a5d23]/5 hover:bg-[#4a5d23]/10 px-2 py-0.5 rounded-md transition">
+              class="text-[#4a5d23] font-bold text-xs hover:underline bg-[#4a5d23]/5 hover:bg-[#4a5d23]/10 px-2.5 py-0.5 rounded-md transition">
              <i class="fa-solid fa-video" style="font-size:10px"></i> Zoom
            </a>`
         : `<span style="height:1.4rem;display:block"></span>`;

@@ -1,32 +1,50 @@
 [
   {
-    "subject": "キリスト者の自由Ⅱ",
+    "subject": "キリスト者の自由 Ⅱ（後半）",
     "teacher": "銭谷 幸器",
-    "youtubeUrl": "https://www.youtube.com/playlist?list=PLZrppDyR13I9t-G6PgI1U9UlhCZl4ADZi"
+    "note": "2026年 後期公開講座",
+    "youtubeUrl": "https://www.youtube.com/playlist?list=PLf1muFyre7n4"
+  },
+  {
+    "subject": "小教理問答書 Ⅳ（洗礼・聖餐）",
+    "teacher": "銭谷 幸器",
+    "note": "2026年 後期公開講座",
+    "youtubeUrl": "https://www.youtube.com/playlist?list=PLCJz5bs0FoKc"
+  },
+  {
+    "subject": "小教理問答書 Ⅲ（「主の祈り」）",
+    "teacher": "銭谷 幸器",
+    "note": "2026年 後期公開講座",
+    "youtubeUrl": ""
+  },
+  {
+    "subject": "詩篇読解 Ⅲ（第三巻）",
+    "teacher": "銭谷 幸器",
+    "note": "2026年 後期公開講座",
+    "youtubeUrl": ""
   },
   {
     "subject": "詩篇講解II",
     "teacher": "銭谷 幸器",
+    "note": "2026年 前期公開講座",
     "youtubeUrl": "https://www.youtube.com/playlist?list=PLZrppDyR13I_36vvzC4yiJhvn3D3qxWAF"
   },
   {
     "subject": "キリスト者の自由I",
     "teacher": "銭谷 幸器",
+    "note": "2026年 前期公開講座",
     "youtubeUrl": "https://www.youtube.com/playlist?list=PLZrppDyR13I9R-FIHmcVLhUNJ3EgDEgZR"
   },
   {
     "subject": "小教理問答書Ⅱ",
     "teacher": "銭谷 幸器",
+    "note": "2026年 前期公開講座",
     "youtubeUrl": "https://www.youtube.com/playlist?list=PLZrppDyR13I8GeHuAHHrDGQrIiUSnNTlv"
   },
   {
     "subject": "雅歌講解",
     "teacher": "銭谷 幸器",
+    "note": "2026年 前期公開講座",
     "youtubeUrl": "https://www.youtube.com/playlist?list=PLZrppDyR13I-bAyaUcoxqokDhXEJrfaw9"
-  },
-  {
-    "subject": "小教理問答書Ⅲ",
-    "teacher": "銭谷 幸器",
-    "youtubeUrl": "https://www.youtube.com/playlist?list=PLZrppDyR13I_Rt3uAPhZpXz155GJlQaNd"
   }
 ]

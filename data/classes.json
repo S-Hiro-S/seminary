@@ -41,7 +41,7 @@
     "chapelTime": "10:35〜11:00",
     "teacher": "金田 与施夫",
     "isPublic": false,
-    "zoomUrl": "https://us02web.zoom.us/j/89421965352?pwd=Ymc1Y1BrZHdaTi9IdHhJZ1d1NEVidz09"
+    "zoomUrl": ""
   },
   {
     "id": "wed_chapel",
@@ -56,7 +56,7 @@
     "note": "10:35〜11:00",
     "teacher": "金田 与施夫",
     "isPublic": false,
-    "zoomUrl": "https://us02web.zoom.us/j/89421965352?pwd=Ymc1Y1BrZHdaTi9IdHhJZ1d1NEVidz09"
+    "zoomUrl": ""
   },
   {
     "id": "wed_3_4",
@@ -70,7 +70,7 @@
     "note": "",
     "teacher": "銭谷 幸器",
     "isPublic": false,
-    "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09"
+    "zoomUrl": ""
   },
   {
     "id": "thu_1_2",
@@ -84,7 +84,7 @@
     "note": "【新規】",
     "teacher": "銭谷 幸器",
     "isPublic": false,
-    "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09"
+    "zoomUrl": ""
   },
   {
     "id": "thu_3_4",
@@ -98,7 +98,7 @@
     "note": "",
     "teacher": "銭谷 幸器",
     "isPublic": false,
-    "zoomUrl": "https://us02web.zoom.us/j/89316135898?pwd=UjFSbXR0U1IwbHNLR0xaUkNFZWdLQT09"
+    "zoomUrl": ""
   },
   {
     "id": "fri_1_2",
@@ -112,7 +112,7 @@
     "note": "神学科2年のみ",
     "teacher": "田口 聖",
     "isPublic": false,
-    "zoomUrl": "https://us02web.zoom.us/j/89421965352?pwd=Ymc1Y1BrZHdaTi9IdHhJZ1d1NEVidz09"
+    "zoomUrl": ""
   },
   {
     "id": "fri_3_4",
@@ -126,7 +126,7 @@
     "note": "神学科2年のみ",
     "teacher": "田口 聖",
     "isPublic": false,
-    "zoomUrl": "https://us02web.zoom.us/j/89421965352?pwd=Ymc1Y1BrZHdaTi9IdHhJZ1d1NEVidz09"
+    "zoomUrl": ""
   },
   {
     "id": "sat_1_2",
