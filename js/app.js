@@ -3,15 +3,11 @@
 // ==========================================
 const DAYS = ['火', '水', '木', '金', '土'];
 const PERIODS = [
-  { id: 'p1', label: '1〜2時限', time: '9:00〜10:30' },
-  { id: 'chapel', label: 'チャペル', time: '10:35〜11:00' },
-  { id: 'p2', label: '3〜4時限', time: '11:05〜12:35' },
+  { id: 1, label: '1時限', time: '9:00〜9:45' },
+  { id: 2, label: '2時限', time: '9:45〜10:40' },
+  { id: 3, label: '3時限', time: '10:50〜11:35' },
+  { id: 4, label: '4時限', time: '11:45〜12:30' },
 ];
-const PERIOD_RANGE = {
-  p1: { start: 540, end: 630 },
-  chapel: { start: 635, end: 660 },
-  p2: { start: 665, end: 755 },
-};
 
 // ==========================================
 // データ取得（静的JSON + localStorage キャッシュフォールバック）
@@ -53,17 +49,32 @@ function todayLabel() {
   return ['日', '月', '火', '水', '木', '金', '土'][new Date().getDay()];
 }
 
-function currentPeriodId() {
-  const now = new Date();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  for (const [id, { start, end }] of Object.entries(PERIOD_RANGE)) {
-    if (mins >= start && mins <= end) return id;
-  }
-  return null;
+function timeStrToMinutes(str) {
+  if (!str) return null;
+  const parts = str.split(':');
+  if (parts.length < 2) return null;
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
 }
 
-function classAt(classes, period, day) {
-  return classes.find(c => c.period === period && c.day === day) || null;
+// 現在時刻に開講中の授業（またはチャペル）を取得
+function getActiveClassNow(classes) {
+  if (!Array.isArray(classes) || !classes.length) return null;
+  const day = todayLabel();
+  if (!DAYS.includes(day)) return null;
+
+  const now = new Date();
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  const todayClasses = classes.filter(c => c.day === day);
+
+  // 水曜チャペルなどの独立個別スロットを優先判定
+  const matched = todayClasses.find(c => {
+    const s = timeStrToMinutes(c.startTime);
+    const e = timeStrToMinutes(c.endTime);
+    return s !== null && e !== null && nowMins >= s && nowMins <= e;
+  });
+
+  return matched || null;
 }
 
 function toBool(val) {
@@ -227,20 +238,12 @@ function formatPeriodDisplay(val) {
   return s;
 }
 
-// 資料ボタンを通常状態（時間割の資料ページへの導線）に戻す
-function resetMaterialsBtn() {
-  const btn = document.getElementById('materials-btn');
-  if (!btn) return;
-  btn.onclick = () => navigate('materials');
-  btn.disabled = false;
-  btn.classList.remove('opacity-50', 'cursor-not-allowed');
-  btn.innerHTML = '<i class="fa-solid fa-folder-open"></i> この授業の資料';
-}
+// 資料ボタン用ユーティリティ（現在資料は非公開化）
+function resetMaterialsBtn() {}
 
 function renderLiveCard(classes, vacation, intensiveList) {
   const now = new Date();
   const day = todayLabel();
-  const pid = currentPeriodId();
 
   // 現在時刻表示
   document.getElementById('now-time').textContent =
@@ -271,18 +274,6 @@ function renderLiveCard(classes, vacation, intensiveList) {
       zoomBtn.disabled = true;
       zoomBtn.innerHTML = 'Zoom URL 未設定';
       zoomBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
-
-    const materialsBtn = document.getElementById('materials-btn');
-    if (activeIntensive.driveUrl && String(activeIntensive.driveUrl).startsWith('http')) {
-      materialsBtn.onclick = () => window.open(activeIntensive.driveUrl, '_blank');
-      materialsBtn.disabled = false;
-      materialsBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-      materialsBtn.innerHTML = '<i class="fa-solid fa-folder-open"></i> 集中講義の資料';
-    } else {
-      materialsBtn.disabled = true;
-      materialsBtn.classList.add('opacity-50', 'cursor-not-allowed');
-      materialsBtn.innerHTML = '<i class="fa-solid fa-folder-open"></i> 資料未設定';
     }
     return;
   }
@@ -330,7 +321,7 @@ function renderLiveCard(classes, vacation, intensiveList) {
   document.getElementById('vacation-badge')?.classList.add('hidden');
 
   // ③ 通常の時間割で今授業中か
-  const active = (pid && DAYS.includes(day)) ? classAt(classes, pid, day) : null;
+  const active = vacation ? null : getActiveClassNow(classes);
 
   if (!active || !active.subject) {
     document.getElementById('now-subject').textContent = '現在は授業時間外です';
@@ -338,30 +329,30 @@ function renderLiveCard(classes, vacation, intensiveList) {
     document.getElementById('live-badge').classList.add('hidden');
     document.getElementById('live-actions').classList.add('hidden');
     const hint = document.getElementById('off-hint');
-    hint.textContent = '⏳ 本日の予定は「時間割」または「授業資料」からご確認ください。';
+    hint.textContent = '⏳ 本日の予定は「時間割」からご確認ください。';
     hint.classList.remove('hidden');
     return;
   }
 
+  const isChapel = active.subject === 'チャペル';
   document.getElementById('now-subject').textContent =
-    active.subject + (active.note ? `（${active.note}）` : '');
+    active.subject + (active.note && !isChapel ? `（${active.note}）` : '');
   document.getElementById('now-teacher').textContent =
-    active.teacher ? `担当：${active.teacher} 師` : 'チャペル（礼拝）';
+    isChapel ? 'チャペル（礼拝） 担当：金田 与施夫 師' : (active.teacher ? `担当：${active.teacher} 師` : '');
   document.getElementById('live-badge').classList.remove('hidden');
   document.getElementById('off-hint').classList.add('hidden');
 
-  if (pid !== 'chapel') {
-    document.getElementById('live-actions').classList.remove('hidden');
-    const zoomBtn = document.getElementById('zoom-btn');
-    if (active.zoomUrl && String(active.zoomUrl).startsWith('http')) {
-      zoomBtn.onclick = () => window.open(active.zoomUrl, '_blank');
-      zoomBtn.disabled = false;
-      zoomBtn.innerHTML = '<i class="fa-solid fa-video"></i> Zoomで参加する';
-    } else {
-      zoomBtn.disabled = true;
-      zoomBtn.innerHTML = 'Zoom URL 未設定';
-      zoomBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    }
+  document.getElementById('live-actions').classList.remove('hidden');
+  const zoomBtn = document.getElementById('zoom-btn');
+  if (active.zoomUrl && String(active.zoomUrl).startsWith('http')) {
+    zoomBtn.onclick = () => window.open(active.zoomUrl, '_blank');
+    zoomBtn.disabled = false;
+    zoomBtn.innerHTML = '<i class="fa-solid fa-video"></i> Zoomで参加する';
+    zoomBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+  } else {
+    zoomBtn.disabled = true;
+    zoomBtn.innerHTML = 'Zoom URL 未設定';
+    zoomBtn.classList.add('opacity-50', 'cursor-not-allowed');
   }
 }
 
@@ -477,78 +468,104 @@ function renderAnnouncements(data) {
 // ==========================================
 function renderTimetable(classes, vacation) {
   const today = todayLabel();
-  const pid = vacation ? null : currentPeriodId();
+  const activeClass = vacation ? null : getActiveClassNow(classes);
 
   const headerCells = DAYS.map(d => `
-    <th class="border border-[#2c3614] p-3 text-sm min-w-[100px]
+    <th class="border border-[#2c3614] p-3 text-sm min-w-[120px]
                ${d === today ? 'today-header' : ''}">${d}</th>
   `).join('');
 
+  // 結合済みセル管理
+  const skipMap = { '火': {}, '水': {}, '木': {}, '金': {}, '土': {} };
+  const displayClasses = (classes || []).filter(c => c.isSeparateSlot !== false);
+
   const bodyRows = PERIODS.map(p => {
+    const periodNum = p.id;
+
     const cells = DAYS.map(d => {
-      const cls = classAt(classes, p.id, d);
+      if (skipMap[d] && skipMap[d][periodNum]) {
+        return ''; // 上の時限のrowspanで結合済み
+      }
+
+      const cls = displayClasses.find(c => c.day === d && c.startPeriod === periodNum);
       const isToday = d === today;
-      const isActive = isToday && pid === p.id;
+
+      if (!cls) {
+        // 授業なしスロット（例：土曜日4時限など）
+        const tdCls = [
+          'border border-gray-200 p-2 align-middle text-center bg-gray-50/60',
+          isToday ? 'today-col' : '',
+        ].join(' ');
+
+        return `
+          <td class="${tdCls}" style="height:1px">
+            <div class="flex flex-col items-center justify-center h-full min-h-[90px] text-gray-300 font-bold text-sm">
+              ―
+            </div>
+          </td>`;
+      }
+
+      const rowSpan = (cls.endPeriod - cls.startPeriod) + 1;
+      for (let r = cls.startPeriod + 1; r <= cls.endPeriod; r++) {
+        skipMap[d][r] = true;
+      }
+
+      const isActive = isToday && activeClass && (
+        activeClass.id === cls.id || (cls.hasChapel && activeClass.id === 'wed_chapel')
+      );
+
       const tdCls = [
-        'border border-gray-200 p-2 align-top text-center',
+        'border border-gray-200 p-2 align-top text-center transition-colors',
         isToday ? 'today-col' : '',
         isActive ? 'live-cell' : '',
       ].join(' ');
 
-      // 空セル（授業なし）― リンクスロット2行分を確保して高さを揃える
-      if (!cls || !cls.subject) {
-        return `<td class="${tdCls}" style="height:1px">
-          <div class="flex flex-col h-full">
-            <div class="flex-1"></div>
-            <div class="border-t border-gray-100 flex flex-col items-center py-1">
-              <span style="height:1.3rem;display:block"></span>
-              <span style="height:1.3rem;display:block"></span>
-            </div>
-          </div>
-        </td>`;
+      const hasZoom = cls.zoomUrl && String(cls.zoomUrl).startsWith('http');
+
+      // Zoomスロット
+      const zoomSlot = hasZoom
+        ? `<a href="${cls.zoomUrl}" target="_blank" rel="noopener"
+              style="height:1.4rem;display:flex;align-items:center;justify-content:center;gap:4px"
+              class="text-[#4a5d23] font-bold text-xs hover:underline bg-[#4a5d23]/5 hover:bg-[#4a5d23]/10 px-2 py-0.5 rounded-md transition">
+             <i class="fa-solid fa-video" style="font-size:10px"></i> Zoom
+           </a>`
+        : `<span style="height:1.4rem;display:block"></span>`;
+
+      // バッジ（公開講座 / 新規）
+      let badgeHtml = '<span style="height:1.2rem;display:block"></span>';
+      if (toBool(cls.isPublic)) {
+        badgeHtml = '<span class="text-[10px] text-[#4a5d23] font-black mb-1 bg-green-50 px-2 py-0.5 rounded-full inline-block border border-[#4a5d23]/20">📢 公開講座</span>';
+      } else if (cls.note === '【新規】' || cls.subject.includes('新規')) {
+        badgeHtml = '<span class="text-[10px] text-amber-700 font-black mb-1 bg-amber-50 px-2 py-0.5 rounded-full inline-block border border-amber-300">✨ 新規</span>';
       }
 
-      const hasZoom = cls.zoomUrl && String(cls.zoomUrl).startsWith('http');
-      const hasDrive = cls.driveUrl && String(cls.driveUrl).startsWith('http');
-
-      // Zoomスロット：リンクがなくても同じ高さのspanを置く
-      const zoomSlot = (hasZoom && p.id !== 'chapel')
-        ? `<a href="${cls.zoomUrl}" target="_blank" rel="noopener"
-              style="height:1.3rem;display:flex;align-items:center;justify-content:center;gap:4px"
-              class="text-[#4a5d23] font-bold text-xs hover:underline">
-             <i class="fa-solid fa-video" style="font-size:9px"></i> Zoom
-           </a>`
-        : `<span style="height:1.3rem;display:block"></span>`;
-
-      // 資料スロット：リンクがなくても同じ高さのspanを置く
-      const driveSlot = hasDrive
-        ? `<a href="${cls.driveUrl}" target="_blank" rel="noopener"
-              style="height:1.3rem;display:flex;align-items:center;justify-content:center;gap:4px"
-              class="text-[#8b5a2b] font-bold text-xs hover:underline">
-             <i class="fa-solid fa-folder-open" style="font-size:9px"></i> 資料
-           </a>`
-        : `<span style="height:1.3rem;display:block"></span>`;
+      // チャペル付き（水曜 1〜2時限）
+      let chapelHtml = '';
+      if (cls.hasChapel) {
+        chapelHtml = `
+          <div class="my-2 p-1.5 bg-[#fdfbf7] border border-[#8b5a2b]/30 rounded-lg text-xs">
+            <span class="font-bold text-[#8b5a2b] block">⛪ チャペル</span>
+            <span class="text-[11px] text-gray-500 font-mono">${cls.chapelTime || '10:35〜11:00'}</span>
+          </div>
+        `;
+      }
 
       return `
-        <td class="${tdCls}" style="height:1px">
-          <div class="flex flex-col h-full">
+        <td class="${tdCls}" rowspan="${rowSpan}" style="height:1px">
+          <div class="flex flex-col h-full justify-between">
 
-            <!-- 上段：科目・担当（上揃え・横センター） -->
-            <div class="flex-1 flex flex-col items-center text-center px-2 pt-3 pb-1">
-              ${p.id !== 'chapel'
-          ? (toBool(cls.isPublic)
-            ? '<span class="text-[10px] text-[#4a5d23] font-bold mb-1" style="height:1.2rem;display:block">📢 公開授業</span>'
-            : '<span style="height:1.2rem;display:block"></span>')
-          : ''}
-              <span class="font-bold text-sm leading-snug">${cls.subject}</span>
-              ${cls.note ? `<span class="text-xs text-gray-400 mt-0.5">${cls.note}</span>` : ''}
-              ${cls.teacher ? `<span class="text-xs text-gray-500 mt-1">${cls.teacher}</span>` : ''}
+            <!-- 上段：科目・担当 -->
+            <div class="flex-1 flex flex-col items-center text-center px-1 pt-2 pb-2">
+              ${badgeHtml}
+              <span class="font-bold text-sm md:text-base leading-snug text-[#2c3614]">${cls.subject}</span>
+              ${cls.note && cls.note !== '【新規】' ? `<span class="text-xs text-gray-500 mt-0.5 font-medium">${cls.note}</span>` : ''}
+              ${chapelHtml}
+              ${cls.teacher ? `<span class="text-xs text-gray-600 mt-1">${cls.teacher}</span>` : ''}
             </div>
 
-            <!-- 下段：固定高さスロット（Zoom・資料 各1.3rem） -->
-            <div class="border-t border-gray-100 flex flex-col items-center py-1">
+            <!-- 下段：Zoomスロット -->
+            <div class="flex flex-col items-center py-1 mt-1">
               ${zoomSlot}
-              ${driveSlot}
             </div>
 
           </div>
@@ -557,9 +574,9 @@ function renderTimetable(classes, vacation) {
 
     return `
       <tr>
-        <td class="border border-gray-200 bg-[#fdfbf7] p-3 text-center font-bold text-sm whitespace-nowrap">
+        <td class="border border-gray-200 bg-[#fdfbf7] p-3 text-center font-bold text-sm whitespace-nowrap min-w-[95px]">
           ${p.label}<br>
-          <span class="text-xs font-normal text-gray-400">${p.time}</span>
+          <span class="text-xs font-normal text-gray-500 font-mono">${p.time}</span>
         </td>
         ${cells}
       </tr>`;
@@ -569,7 +586,7 @@ function renderTimetable(classes, vacation) {
     <table class="w-full border-collapse border-2 border-[#2c3614]">
       <thead>
         <tr class="bg-[#2c3614] text-white text-center">
-          <th class="border border-[#2c3614] p-3 text-sm min-w-[80px]">時間</th>
+          <th class="border border-[#2c3614] p-3 text-sm min-w-[95px]">時限</th>
           ${headerCells}
         </tr>
       </thead>
@@ -583,19 +600,20 @@ function renderTimetable(classes, vacation) {
 function renderMaterials(classes) {
   const today = todayLabel();
   const el = document.getElementById('materials-list');
+  if (!el) return;
 
   el.innerHTML = DAYS.map(day => {
     const isToday = day === today;
-    const dayCls = classes.filter(c => c.day === day && c.period !== 'chapel');
+    const dayCls = (classes || []).filter(c => c.day === day && c.isSeparateSlot !== false);
 
     const cards = dayCls.map(cls => {
-      const period = PERIODS.find(p => p.id === cls.period);
       const hasDrive = cls.driveUrl && String(cls.driveUrl).startsWith('http');
       return `
         <div class="bg-white border-2 ${isToday ? 'border-[#8b5a2b]' : 'border-gray-100'}
                     rounded-2xl p-5 hover:shadow-md transition">
           <p class="text-xs font-bold text-[#4a5d23] mb-1">
-            ${period ? period.label : cls.period}
+            ${cls.periodLabel || (cls.startPeriod === cls.endPeriod ? `${cls.startPeriod}時限` : `${cls.startPeriod}〜${cls.endPeriod}時限`)}
+            <span class="font-normal text-gray-400 ml-1 font-mono">${cls.startTime}〜${cls.endTime}</span>
           </p>
           <p class="font-bold text-[#2c3614]">
             ${cls.subject}${cls.note ? `（${cls.note}）` : ''}
@@ -671,15 +689,6 @@ function renderArchives(data, intensiveRaw) {
              <i class="fa-brands fa-youtube"></i> YouTubeで見る
            </a>`
         : `<p class="mt-4 text-center text-xs text-gray-300">準備中</p>`
-      }
-      ${hasDrive
-        ? `<a href="${a.driveUrl}" target="_blank" rel="noopener"
-              class="mt-2 flex items-center justify-center gap-2
-                     bg-[#8b5a2b] hover:bg-[#6b4422] text-white py-3
-                     rounded-xl font-bold transition">
-             <i class="fa-solid fa-folder-open"></i> 資料を見る
-           </a>`
-        : ''
       }
     </div>`;
   }).join('');

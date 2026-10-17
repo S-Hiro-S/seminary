@@ -170,22 +170,17 @@
         <p id="now-teacher" class="text-gray-500 text-lg mb-6"></p>
 
         <!-- 授業中ボタン -->
-        <div id="live-actions" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <button id="zoom-btn" class="press flex items-center justify-center gap-3
+        <div id="live-actions" class="hidden mb-4">
+          <button id="zoom-btn" class="press w-full flex items-center justify-center gap-3
                        bg-[#4a5d23] hover:bg-[#2c3614] text-white
-                       p-5 rounded-2xl font-bold text-xl transition">
+                       p-5 rounded-2xl font-bold text-xl transition shadow">
             <i class="fa-solid fa-video"></i> Zoomで参加する
-          </button>
-          <button id="materials-btn" onclick="navigate('materials')" class="press flex items-center justify-center gap-3
-                       bg-[#8b5a2b] hover:bg-[#6b4422] text-white
-                       p-5 rounded-2xl font-bold text-xl transition">
-            <i class="fa-solid fa-folder-open"></i> この授業の資料
           </button>
         </div>
 
         <!-- 授業外ヒント -->
         <div id="off-hint" class="p-4 bg-[#fdfbf7] rounded-xl border border-[#4a5d23]/20 text-gray-600 text-base">
-          ⏳ 本日の予定は「時間割」または「授業資料」からご確認ください。
+          ⏳ 本日の予定は「時間割」からご確認ください。
         </div>
       </div>
 
@@ -203,11 +198,31 @@
     <!-- ---- 時間割 ---- -->
     <section id="section-schedule" class="section">
       <div class="bg-white rounded-3xl shadow border border-gray-100 p-6 md:p-8">
-        <h1 class="text-2xl font-bold text-[#2c3614] border-b-4 border-[#8b5a2b] pb-3 mb-6">
-          🗓️ 2026年度 後期時間割
-        </h1>
+        <div class="border-b-4 border-[#8b5a2b] pb-3 mb-6 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
+          <h1 class="text-2xl font-bold text-[#2c3614]">
+            🗓️ 2026年度 後期時間割
+          </h1>
+          <span class="text-sm font-bold text-[#8b5a2b]">
+            10月13日〜12月12日、1月12日〜3月6日
+          </span>
+        </div>
         <div id="timetable-wrap" class="overflow-x-auto">
           <p class="text-gray-400">読み込み中...</p>
+        </div>
+
+        <!-- 注記・日程メモ -->
+        <div class="mt-8 p-5 bg-[#fdfbf7] rounded-2xl border border-[#4a5d23]/20 space-y-3 text-sm text-gray-700">
+          <div class="flex flex-wrap gap-x-6 gap-y-1 font-medium text-xs md:text-sm text-[#2c3614]">
+            <span>📅 <strong>後期期間：</strong>10月13日〜12月12日、1月12日〜3月6日</span>
+            <span>🌴 <strong>冬期休暇：</strong>12月13日〜1月11日</span>
+            <span>📝 <strong>後期試験期間：</strong>3月9日〜13日</span>
+          </div>
+          <hr class="border-[#4a5d23]/10">
+          <ul class="list-disc list-inside space-y-1 text-xs md:text-sm text-gray-600 leading-relaxed">
+            <li>学年末の試験は担当教師により、時間を取っての試験とレポートの二種類に分かれます。</li>
+            <li>神学科2年：原田智兄 ／ 神学科研修課程：加藤正伸兄</li>
+            <li>銭谷幸器師の授業は火・土を公開講座とします（録画あり）。田口聖師の授業は神学科2学年のみです。</li>
+          </ul>
         </div>
       </div>
     </section>
