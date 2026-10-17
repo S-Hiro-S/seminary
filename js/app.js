@@ -693,6 +693,7 @@ function renderArchives(data, intensiveRaw) {
       <div class="bg-gray-100 h-28 rounded-xl flex items-center justify-center text-5xl mb-4">🎥</div>
       ${a.isIntensive ? '<span class="inline-block bg-[#8b5a2b] text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2">🎓 集中講義</span>' : ''}
       <p class="font-bold text-[#2c3614]">${a.subject}</p>
+      ${a.note ? `<p class="text-xs text-gray-500 mt-0.5">${a.note}</p>` : ''}
       <p class="text-sm text-gray-500 mt-1">担当：${a.teacher}</p>
       ${a.youtubeUrl && String(a.youtubeUrl).startsWith('http')
         ? `<a href="${a.youtubeUrl}" target="_blank" rel="noopener"
